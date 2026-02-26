@@ -3,13 +3,14 @@ import logging
 import hashlib
 import math
 import random
+import uuid
 
 from dotenv import load_dotenv
 from flask import Flask, jsonify, request
 from openai import OpenAI, APIConnectionError, APITimeoutError, APIStatusError, RateLimitError
 import psycopg2
 from psycopg2 import OperationalError
-from psycopg2.errors import UndefinedTable
+from psycopg2.errors import UndefinedTable, ForeignKeyViolation
 from psycopg2.extras import RealDictCursor
 from psycopg2.pool import ThreadedConnectionPool
 from pgvector.psycopg2 import register_vector
@@ -23,6 +24,7 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 EMBED_MODEL = os.getenv("OPENAI_EMBED_MODEL", "text-embedding-3-small")
 MOCK_EMBEDDINGS = os.getenv("MOCK_EMBEDDINGS", "false").lower() == "true"
+SERVICE_TOKEN = os.getenv("SERVICE_TOKEN", "")
 
 if not DATABASE_URL:
   raise RuntimeError("DATABASE_URL is required")
@@ -70,6 +72,49 @@ def _validate_payload(payload):
     return None, "topK must be an integer between 1 and 20."
 
   return {"description": normalized, "top_k": top_k}, None
+
+
+def _validate_volunteer_index_payload(payload):
+  if not isinstance(payload, dict):
+    return None, "Request body must be a JSON object."
+
+  user_id = payload.get("userId") or payload.get("user_id")
+  if not isinstance(user_id, str):
+    return None, "userId must be a UUID string."
+
+  try:
+    parsed_user_id = str(uuid.UUID(user_id))
+  except (ValueError, TypeError):
+    return None, "userId must be a valid UUID."
+
+  skill_summary = payload.get("skillSummary") or payload.get("skill_summary")
+  if not isinstance(skill_summary, str):
+    return None, "skillSummary must be a string."
+
+  normalized = " ".join(skill_summary.strip().split())
+  if len(normalized) < 20:
+    return None, "skillSummary must be at least 20 characters."
+
+  return {
+    "user_id": parsed_user_id,
+    "skill_summary": normalized
+  }, None
+
+
+def _assert_service_auth():
+  if not SERVICE_TOKEN:
+    return None
+
+  incoming_token = request.headers.get("x-service-token", "")
+  if incoming_token != SERVICE_TOKEN:
+    return jsonify({
+      "error": {
+        "code": "UNAUTHORIZED",
+        "message": "Missing or invalid service token."
+      }
+    }), 401
+
+  return None
 
 
 def _embed_description(description):
@@ -120,6 +165,32 @@ def _query_top_volunteers(embedding, top_k):
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
       cur.execute(sql, (vector_literal, vector_literal, top_k))
       return cur.fetchall()
+  finally:
+    db_pool.putconn(conn)
+
+
+def _upsert_volunteer_embedding(user_id, skill_summary):
+  embedding = _embed_description(skill_summary)
+  vector_literal = "[" + ",".join(f"{value:.8f}" for value in embedding) + "]"
+
+  sql = """
+    INSERT INTO volunteer_vectors (user_id, embedding, skill_summary)
+    VALUES (%s, %s::vector, %s)
+    ON CONFLICT (user_id)
+    DO UPDATE SET
+      embedding = EXCLUDED.embedding,
+      skill_summary = EXCLUDED.skill_summary
+  """
+
+  conn = db_pool.getconn()
+  try:
+    register_vector(conn)
+    with conn.cursor() as cur:
+      cur.execute(sql, (user_id, vector_literal, skill_summary))
+    conn.commit()
+  except Exception:
+    conn.rollback()
+    raise
   finally:
     db_pool.putconn(conn)
 
@@ -194,6 +265,81 @@ def match():
       "error": {
         "code": "MATCHING_INTERNAL_ERROR",
         "message": "Unexpected internal matching failure."
+      }
+    }), 500
+
+
+@app.route("/api/v1/volunteers/index", methods=["POST", "OPTIONS"])
+def index_volunteer():
+  if request.method == "OPTIONS":
+    return ("", 204)
+
+  auth_error = _assert_service_auth()
+  if auth_error:
+    return auth_error
+
+  payload = request.get_json(silent=True)
+  validated, error = _validate_volunteer_index_payload(payload)
+  if error:
+    return jsonify({"error": {"code": "VALIDATION_ERROR", "message": error}}), 400
+
+  try:
+    _upsert_volunteer_embedding(
+      validated["user_id"],
+      validated["skill_summary"]
+    )
+    return jsonify({
+      "success": True,
+      "volunteerId": validated["user_id"],
+      "embedding_model": EMBED_MODEL
+    }), 200
+
+  except ForeignKeyViolation:
+    return jsonify({
+      "error": {
+        "code": "VOLUNTEER_NOT_FOUND",
+        "message": "Cannot index embedding: volunteer user does not exist."
+      }
+    }), 404
+
+  except (RateLimitError, APITimeoutError, APIConnectionError):
+    return jsonify({
+      "error": {
+        "code": "EMBEDDING_UNAVAILABLE",
+        "message": "Embedding provider temporarily unavailable. Retry shortly."
+      }
+    }), 503
+
+  except APIStatusError:
+    return jsonify({
+      "error": {
+        "code": "EMBEDDING_PROVIDER_ERROR",
+        "message": "Embedding provider returned an error."
+      }
+    }), 502
+
+  except UndefinedTable:
+    return jsonify({
+      "error": {
+        "code": "SCHEMA_NOT_READY",
+        "message": "volunteer_vectors table is missing. Run database bootstrap first."
+      }
+    }), 503
+
+  except OperationalError:
+    return jsonify({
+      "error": {
+        "code": "DB_UNAVAILABLE",
+        "message": "Database connection is unavailable."
+      }
+    }), 503
+
+  except Exception as exc:
+    logger.exception("Volunteer indexing failed: %s", exc)
+    return jsonify({
+      "error": {
+        "code": "INDEXING_INTERNAL_ERROR",
+        "message": "Unexpected internal indexing failure."
       }
     }), 500
 

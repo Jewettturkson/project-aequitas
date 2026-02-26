@@ -23,6 +23,13 @@ services:
     environment:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/aequitas
       PORT: 3000
+      INTELLIGENCE_URL: http://intelligence:8001
+      INTELLIGENCE_SERVICE_TOKEN: ${INTELLIGENCE_SERVICE_TOKEN:-}
+      PROJECT_ADMIN_KEY: ${PROJECT_ADMIN_KEY:-}
+      VOLUNTEER_RATE_LIMIT_WINDOW_MS: ${VOLUNTEER_RATE_LIMIT_WINDOW_MS:-600000}
+      VOLUNTEER_RATE_LIMIT_MAX: ${VOLUNTEER_RATE_LIMIT_MAX:-20}
+      PROJECT_RATE_LIMIT_WINDOW_MS: ${PROJECT_RATE_LIMIT_WINDOW_MS:-600000}
+      PROJECT_RATE_LIMIT_MAX: ${PROJECT_RATE_LIMIT_MAX:-10}
     ports:
       - "3000:3000"
     depends_on:
@@ -39,6 +46,7 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_EMBED_MODEL: text-embedding-3-small
       MOCK_EMBEDDINGS: ${MOCK_EMBEDDINGS:-true}
+      SERVICE_TOKEN: ${INTELLIGENCE_SERVICE_TOKEN:-}
     ports:
       - "8001:8001"
     depends_on:

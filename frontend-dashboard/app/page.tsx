@@ -6,7 +6,9 @@ import {
   Database,
   Leaf,
   Loader2,
+  MapPinned,
   Search,
+  UserPlus,
   Users,
 } from "lucide-react";
 
@@ -22,6 +24,13 @@ type Stats = {
   volunteers: number;
   totalImpact: number;
   activeProjects: number;
+};
+
+type ApiErrorResponse = {
+  message?: string;
+  error?: {
+    message?: string;
+  };
 };
 
 const ORCHESTRATOR_URL =
@@ -42,40 +51,143 @@ export default function Page() {
   const [isMatching, setIsMatching] = useState(false);
   const [results, setResults] = useState<MatchVolunteer[]>([]);
   const [error, setError] = useState("");
+  const [volunteerForm, setVolunteerForm] = useState({
+    fullName: "",
+    email: "",
+    skillSummary: "",
+  });
+  const [projectForm, setProjectForm] = useState({
+    name: "",
+    description: "",
+    latitude: "",
+    longitude: "",
+    adminKey: "",
+  });
+  const [isSubmittingVolunteer, setIsSubmittingVolunteer] = useState(false);
+  const [isSubmittingProject, setIsSubmittingProject] = useState(false);
+  const [volunteerNotice, setVolunteerNotice] = useState("");
+  const [projectNotice, setProjectNotice] = useState("");
 
-  useEffect(() => {
-    let active = true;
+  const loadPlatformState = async () => {
+    try {
+      const [statusRes, statsRes] = await Promise.all([
+        fetch(`${ORCHESTRATOR_URL}/api/v1/status`),
+        fetch(`${ORCHESTRATOR_URL}/api/v1/stats`),
+      ]);
 
-    const load = async () => {
-      try {
-        const [statusRes, statsRes] = await Promise.all([
-          fetch(`${ORCHESTRATOR_URL}/api/v1/status`),
-          fetch(`${ORCHESTRATOR_URL}/api/v1/stats`),
-        ]);
-
-        if (!active) return;
-
-        if (statusRes.ok) {
-          setStatus("connected");
-        } else {
-          setStatus("disconnected");
-        }
-
-        if (statsRes.ok) {
-          const data = (await statsRes.json()) as Stats;
-          setStats(data);
-        }
-      } catch {
-        if (!active) return;
+      if (statusRes.ok) {
+        setStatus("connected");
+      } else {
         setStatus("disconnected");
       }
-    };
 
-    void load();
-    return () => {
-      active = false;
-    };
+      if (statsRes.ok) {
+        const data = (await statsRes.json()) as Stats;
+        setStats(data);
+      }
+    } catch {
+      setStatus("disconnected");
+    }
+  };
+
+  useEffect(() => {
+    void loadPlatformState();
   }, []);
+
+  const handleVolunteerSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    setVolunteerNotice("");
+    setIsSubmittingVolunteer(true);
+
+    try {
+      const response = await fetch(`${ORCHESTRATOR_URL}/api/v1/volunteers`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fullName: volunteerForm.fullName,
+          email: volunteerForm.email,
+          skillSummary: volunteerForm.skillSummary,
+        }),
+      });
+
+      const payload = (await response.json().catch(() => ({}))) as
+        | ApiErrorResponse
+        | { embeddingIndexed?: boolean };
+
+      if (!response.ok) {
+        setVolunteerNotice(
+          payload.message || payload.error?.message || "Volunteer onboarding failed."
+        );
+        return;
+      }
+
+      const embeddingIndexed =
+        "embeddingIndexed" in payload ? Boolean(payload.embeddingIndexed) : true;
+
+      setVolunteerNotice(
+        embeddingIndexed
+          ? "Volunteer added and indexed for matching."
+          : "Volunteer added. Embedding index is pending."
+      );
+      setVolunteerForm({ fullName: "", email: "", skillSummary: "" });
+      await loadPlatformState();
+    } catch {
+      setVolunteerNotice("Could not reach onboarding service.");
+    } finally {
+      setIsSubmittingVolunteer(false);
+    }
+  };
+
+  const handleProjectSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    setProjectNotice("");
+    setIsSubmittingProject(true);
+
+    try {
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      const adminKey = projectForm.adminKey.trim();
+      if (adminKey.length > 0) {
+        headers["X-Admin-Key"] = adminKey;
+      }
+
+      const response = await fetch(`${ORCHESTRATOR_URL}/api/v1/projects`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          name: projectForm.name,
+          description: projectForm.description,
+          latitude: Number(projectForm.latitude),
+          longitude: Number(projectForm.longitude),
+          status: "OPEN",
+        }),
+      });
+
+      const payload = (await response.json().catch(() => ({}))) as ApiErrorResponse;
+
+      if (!response.ok) {
+        setProjectNotice(
+          payload.message || payload.error?.message || "Project creation failed."
+        );
+        return;
+      }
+
+      setProjectNotice("Project posted and opened for volunteer matching.");
+      setProjectForm({
+        name: "",
+        description: "",
+        latitude: "",
+        longitude: "",
+        adminKey: "",
+      });
+      await loadPlatformState();
+    } catch {
+      setProjectNotice("Could not reach project onboarding service.");
+    } finally {
+      setIsSubmittingProject(false);
+    }
+  };
 
   const handleMatch = async (event: FormEvent) => {
     event.preventDefault();
@@ -167,6 +279,138 @@ export default function Page() {
             <p className="text-4xl font-bold text-emerald-600">{stats.activeProjects}</p>
           </div>
         </div>
+
+        <section className="mt-10 grid gap-4 lg:grid-cols-2">
+          <article className="rounded-xl border-2 border-blue-900 bg-white p-5">
+            <div className="mb-4 flex items-center gap-2 text-blue-900">
+              <UserPlus className="h-5 w-5" />
+              <h2 className="text-lg font-semibold">Join As Volunteer</h2>
+            </div>
+
+            <form onSubmit={handleVolunteerSubmit} className="space-y-3">
+              <input
+                value={volunteerForm.fullName}
+                onChange={(event) =>
+                  setVolunteerForm((prev) => ({ ...prev, fullName: event.target.value }))
+                }
+                placeholder="Full name"
+                className="w-full rounded-lg border border-blue-200 px-3 py-2 text-sm text-slate-900 focus:border-blue-900 focus:outline-none"
+                required
+              />
+              <input
+                type="email"
+                value={volunteerForm.email}
+                onChange={(event) =>
+                  setVolunteerForm((prev) => ({ ...prev, email: event.target.value }))
+                }
+                placeholder="Email"
+                className="w-full rounded-lg border border-blue-200 px-3 py-2 text-sm text-slate-900 focus:border-blue-900 focus:outline-none"
+                required
+              />
+              <textarea
+                value={volunteerForm.skillSummary}
+                onChange={(event) =>
+                  setVolunteerForm((prev) => ({
+                    ...prev,
+                    skillSummary: event.target.value,
+                  }))
+                }
+                placeholder="Skills summary (e.g., solar microgrids, GIS mapping, logistics)"
+                className="h-24 w-full rounded-lg border border-blue-200 px-3 py-2 text-sm text-slate-900 focus:border-blue-900 focus:outline-none"
+                required
+              />
+              <button
+                type="submit"
+                disabled={isSubmittingVolunteer}
+                className="inline-flex items-center justify-center rounded-lg bg-blue-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:bg-blue-200"
+              >
+                {isSubmittingVolunteer ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  "Create Volunteer Profile"
+                )}
+              </button>
+            </form>
+            {volunteerNotice ? (
+              <p className="mt-3 text-sm text-slate-700">{volunteerNotice}</p>
+            ) : null}
+          </article>
+
+          <article className="rounded-xl border-2 border-blue-900 bg-white p-5">
+            <div className="mb-4 flex items-center gap-2 text-blue-900">
+              <MapPinned className="h-5 w-5" />
+              <h2 className="text-lg font-semibold">Post A Project</h2>
+            </div>
+
+            <form onSubmit={handleProjectSubmit} className="space-y-3">
+              <input
+                value={projectForm.name}
+                onChange={(event) =>
+                  setProjectForm((prev) => ({ ...prev, name: event.target.value }))
+                }
+                placeholder="Project title"
+                className="w-full rounded-lg border border-blue-200 px-3 py-2 text-sm text-slate-900 focus:border-blue-900 focus:outline-none"
+                required
+              />
+              <textarea
+                value={projectForm.description}
+                onChange={(event) =>
+                  setProjectForm((prev) => ({ ...prev, description: event.target.value }))
+                }
+                placeholder="Urgency, impact goals, and required skills"
+                className="h-24 w-full rounded-lg border border-blue-200 px-3 py-2 text-sm text-slate-900 focus:border-blue-900 focus:outline-none"
+                required
+              />
+              <div className="grid gap-3 sm:grid-cols-2">
+                <input
+                  type="number"
+                  step="any"
+                  value={projectForm.latitude}
+                  onChange={(event) =>
+                    setProjectForm((prev) => ({ ...prev, latitude: event.target.value }))
+                  }
+                  placeholder="Latitude"
+                  className="w-full rounded-lg border border-blue-200 px-3 py-2 text-sm text-slate-900 focus:border-blue-900 focus:outline-none"
+                  required
+                />
+                <input
+                  type="number"
+                  step="any"
+                  value={projectForm.longitude}
+                  onChange={(event) =>
+                    setProjectForm((prev) => ({ ...prev, longitude: event.target.value }))
+                  }
+                  placeholder="Longitude"
+                  className="w-full rounded-lg border border-blue-200 px-3 py-2 text-sm text-slate-900 focus:border-blue-900 focus:outline-none"
+                  required
+                />
+              </div>
+              <input
+                type="password"
+                value={projectForm.adminKey}
+                onChange={(event) =>
+                  setProjectForm((prev) => ({ ...prev, adminKey: event.target.value }))
+                }
+                placeholder="Admin key (required only if posting is protected)"
+                className="w-full rounded-lg border border-blue-200 px-3 py-2 text-sm text-slate-900 focus:border-blue-900 focus:outline-none"
+              />
+              <button
+                type="submit"
+                disabled={isSubmittingProject}
+                className="inline-flex items-center justify-center rounded-lg bg-blue-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:bg-blue-200"
+              >
+                {isSubmittingProject ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  "Publish Project"
+                )}
+              </button>
+            </form>
+            {projectNotice ? (
+              <p className="mt-3 text-sm text-slate-700">{projectNotice}</p>
+            ) : null}
+          </article>
+        </section>
 
         <section className="mt-10">
           <h2 className="text-center text-xl font-semibold text-blue-900">AI Matcher</h2>

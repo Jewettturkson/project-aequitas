@@ -68,6 +68,57 @@ curl -i -X POST http://localhost:8001/api/v1/match \
 
 Expected: `200 OK` with ranked `data`.
 
+## Volunteer and project onboarding APIs
+
+Create a volunteer profile (also triggers embedding index in intelligence service):
+
+```bash
+curl -i -X POST http://localhost:3000/api/v1/volunteers \
+  -H "Content-Type: application/json" \
+  -d '{
+    "fullName":"Amina Solar",
+    "email":"amina@enturk.org",
+    "skillSummary":"Solar microgrids, GIS mapping, rapid field deployment and community energy planning."
+  }'
+```
+
+Create a project posting:
+
+```bash
+curl -i -X POST http://localhost:3000/api/v1/projects \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name":"Rapid Reforestation Deployment",
+    "description":"Urgent reforestation effort requiring logistics, field deployment, and GIS support.",
+    "latitude":47.6062,
+    "longitude":-122.3321,
+    "status":"OPEN"
+  }'
+```
+
+## Deployment env vars for onboarding flow
+
+Orchestrator service:
+
+```text
+INTELLIGENCE_URL=https://ai.nodeenturk.org
+INTELLIGENCE_SERVICE_TOKEN=<shared-secret>
+PROJECT_ADMIN_KEY=<optional-admin-key-for-project-posting>
+VOLUNTEER_RATE_LIMIT_WINDOW_MS=600000
+VOLUNTEER_RATE_LIMIT_MAX=20
+PROJECT_RATE_LIMIT_WINDOW_MS=600000
+PROJECT_RATE_LIMIT_MAX=10
+```
+
+Intelligence service:
+
+```text
+SERVICE_TOKEN=<shared-secret>
+```
+
+If you do not set `SERVICE_TOKEN`, the volunteer-index endpoint remains open. For production, set both values to the same secret.
+If you set `PROJECT_ADMIN_KEY`, project posting requires either `X-Admin-Key: <key>` or `Authorization: Bearer <key>`.
+
 ## OpenAI mode vs mock mode
 
 `docker-compose.yml` defaults to `MOCK_EMBEDDINGS=true` for easy local preview.
