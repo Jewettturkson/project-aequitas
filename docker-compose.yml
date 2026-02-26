@@ -1,0 +1,65 @@
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: aequitas
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./database/bootstrap:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d aequitas"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  orchestrator:
+    build:
+      context: ./backend-a-orchestrator
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/aequitas
+      PORT: 3000
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  intelligence:
+    build:
+      context: ./backend-b-intelligence
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/aequitas
+      PORT: 8001
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_EMBED_MODEL: text-embedding-3-small
+      MOCK_EMBEDDINGS: ${MOCK_EMBEDDINGS:-true}
+    ports:
+      - "8001:8001"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  dashboard:
+    build:
+      context: ./frontend-dashboard
+    environment:
+      NEXT_PUBLIC_ORCHESTRATOR_URL: http://localhost:3000
+      NEXT_PUBLIC_INTELLIGENCE_URL: http://localhost:8001
+    ports:
+      - "3001:3000"
+    depends_on:
+      orchestrator:
+        condition: service_started
+      intelligence:
+        condition: service_started
+    restart: unless-stopped
+
+volumes:
+  db_data:

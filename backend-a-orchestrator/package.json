@@ -1,0 +1,21 @@
+{
+  "name": "backend-a-orchestrator",
+  "version": "1.0.0",
+  "private": true,
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "mocha \"tests/**/*.test.js\" --exit"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "pg": "^8.13.3",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "chai": "^4.5.0",
+    "mocha": "^11.1.0",
+    "sinon": "^19.0.2",
+    "supertest": "^7.0.0"
+  }
+}
