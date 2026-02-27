@@ -48,12 +48,16 @@ type ApiErrorResponse = {
   error?: {
     message?: string;
   };
+  details?: {
+    fieldErrors?: Record<string, string[] | undefined>;
+  };
 };
 
 const ORCHESTRATOR_URL =
   process.env.NEXT_PUBLIC_ORCHESTRATOR_URL || "http://localhost:3000";
 const INTELLIGENCE_URL =
   process.env.NEXT_PUBLIC_INTELLIGENCE_URL || "http://localhost:8001";
+const MIN_SKILL_SUMMARY_LENGTH = 20;
 
 export default function Page() {
   const [status, setStatus] = useState<"loading" | "connected" | "disconnected">(
@@ -132,6 +136,13 @@ export default function Page() {
   const handleVolunteerSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setVolunteerNotice("");
+
+    const normalizedSkillSummary = volunteerForm.skillSummary.trim();
+    if (normalizedSkillSummary.length < MIN_SKILL_SUMMARY_LENGTH) {
+      setVolunteerNotice("Skill summary must be at least 20 characters.");
+      return;
+    }
+
     setIsSubmittingVolunteer(true);
 
     try {
@@ -141,7 +152,7 @@ export default function Page() {
         body: JSON.stringify({
           fullName: volunteerForm.fullName,
           email: volunteerForm.email,
-          skillSummary: volunteerForm.skillSummary,
+          skillSummary: normalizedSkillSummary,
         }),
       });
 
@@ -151,8 +162,13 @@ export default function Page() {
 
       if (!response.ok) {
         const errorPayload = payload as ApiErrorResponse;
+        const fieldMessage =
+          errorPayload.details?.fieldErrors?.skillSummary?.[0] ||
+          errorPayload.details?.fieldErrors?.email?.[0] ||
+          errorPayload.details?.fieldErrors?.fullName?.[0];
         setVolunteerNotice(
-          errorPayload.message ||
+          fieldMessage ||
+            errorPayload.message ||
             errorPayload.error?.message ||
             "Volunteer onboarding failed."
         );
@@ -398,8 +414,12 @@ export default function Page() {
                 }
                 placeholder="Skills summary (e.g., solar microgrids, GIS mapping, logistics)"
                 className="h-24 w-full rounded-lg border border-blue-200 px-3 py-2 text-sm text-slate-900 focus:border-blue-900 focus:outline-none"
+                minLength={MIN_SKILL_SUMMARY_LENGTH}
                 required
               />
+              <p className="text-xs text-slate-500">
+                Minimum 20 characters so the AI matcher can index useful context.
+              </p>
               <button
                 type="submit"
                 disabled={isSubmittingVolunteer}
