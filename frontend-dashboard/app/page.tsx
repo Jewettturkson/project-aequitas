@@ -150,8 +150,11 @@ export default function Page() {
         | { embeddingIndexed?: boolean };
 
       if (!response.ok) {
+        const errorPayload = payload as ApiErrorResponse;
         setVolunteerNotice(
-          payload.message || payload.error?.message || "Volunteer onboarding failed."
+          errorPayload.message ||
+            errorPayload.error?.message ||
+            "Volunteer onboarding failed."
         );
         return;
       }
