@@ -53,6 +53,24 @@ type ApiErrorResponse = {
   };
 };
 
+type VolunteerFormErrors = {
+  fullName?: string;
+  email?: string;
+  skillSummary?: string;
+};
+
+type ProjectFormErrors = {
+  name?: string;
+  description?: string;
+  latitude?: string;
+  longitude?: string;
+};
+
+type ToastState = {
+  tone: "success" | "error";
+  message: string;
+};
+
 const ORCHESTRATOR_URL =
   process.env.NEXT_PUBLIC_ORCHESTRATOR_URL || "http://localhost:3000";
 const INTELLIGENCE_URL =
@@ -90,8 +108,67 @@ export default function Page() {
   const [isSubmittingProject, setIsSubmittingProject] = useState(false);
   const [volunteerNotice, setVolunteerNotice] = useState("");
   const [projectNotice, setProjectNotice] = useState("");
+  const [isDirectoryLoading, setIsDirectoryLoading] = useState(true);
+  const [activeIntakeTab, setActiveIntakeTab] = useState<"volunteer" | "project">(
+    "volunteer"
+  );
+  const [volunteerErrors, setVolunteerErrors] = useState<VolunteerFormErrors>({});
+  const [projectErrors, setProjectErrors] = useState<ProjectFormErrors>({});
+  const [toast, setToast] = useState<ToastState | null>(null);
+
+  const showToast = (tone: ToastState["tone"], message: string) => {
+    setToast({ tone, message });
+  };
+
+  const validateVolunteerForm = () => {
+    const errors: VolunteerFormErrors = {};
+
+    if (volunteerForm.fullName.trim().length < 2) {
+      errors.fullName = "Full name must be at least 2 characters.";
+    }
+
+    const normalizedEmail = volunteerForm.email.trim();
+    if (normalizedEmail.length === 0) {
+      errors.email = "Email is required.";
+    } else if (!/^\S+@\S+\.\S+$/.test(normalizedEmail)) {
+      errors.email = "Enter a valid email address.";
+    }
+
+    if (volunteerForm.skillSummary.trim().length < MIN_SKILL_SUMMARY_LENGTH) {
+      errors.skillSummary = "Skill summary must be at least 20 characters.";
+    }
+
+    setVolunteerErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const validateProjectForm = () => {
+    const errors: ProjectFormErrors = {};
+
+    if (projectForm.name.trim().length < 3) {
+      errors.name = "Project title must be at least 3 characters.";
+    }
+
+    if (projectForm.description.trim().length < 20) {
+      errors.description = "Description must be at least 20 characters.";
+    }
+
+    const latitude = Number(projectForm.latitude);
+    if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) {
+      errors.latitude = "Latitude must be between -90 and 90.";
+    }
+
+    const longitude = Number(projectForm.longitude);
+    if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
+      errors.longitude = "Longitude must be between -180 and 180.";
+    }
+
+    setProjectErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   const loadPlatformState = async () => {
+    setIsDirectoryLoading(true);
     try {
       const [statusRes, statsRes, volunteersRes, projectsRes] = await Promise.all([
         fetch(`${ORCHESTRATOR_URL}/api/v1/status`),
@@ -126,6 +203,8 @@ export default function Page() {
       }
     } catch {
       setStatus("disconnected");
+    } finally {
+      setIsDirectoryLoading(false);
     }
   };
 
@@ -133,15 +212,21 @@ export default function Page() {
     void loadPlatformState();
   }, []);
 
+  useEffect(() => {
+    if (!toast) return undefined;
+    const timer = setTimeout(() => setToast(null), 3500);
+    return () => clearTimeout(timer);
+  }, [toast]);
+
   const handleVolunteerSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setVolunteerNotice("");
+    setVolunteerErrors({});
 
-    const normalizedSkillSummary = volunteerForm.skillSummary.trim();
-    if (normalizedSkillSummary.length < MIN_SKILL_SUMMARY_LENGTH) {
-      setVolunteerNotice("Skill summary must be at least 20 characters.");
+    if (!validateVolunteerForm()) {
       return;
     }
+    const normalizedSkillSummary = volunteerForm.skillSummary.trim();
 
     setIsSubmittingVolunteer(true);
 
@@ -162,16 +247,21 @@ export default function Page() {
 
       if (!response.ok) {
         const errorPayload = payload as ApiErrorResponse;
-        const fieldMessage =
-          errorPayload.details?.fieldErrors?.skillSummary?.[0] ||
-          errorPayload.details?.fieldErrors?.email?.[0] ||
-          errorPayload.details?.fieldErrors?.fullName?.[0];
-        setVolunteerNotice(
-          fieldMessage ||
-            errorPayload.message ||
-            errorPayload.error?.message ||
-            "Volunteer onboarding failed."
-        );
+        const nextErrors: VolunteerFormErrors = {
+          skillSummary: errorPayload.details?.fieldErrors?.skillSummary?.[0],
+          email: errorPayload.details?.fieldErrors?.email?.[0],
+          fullName: errorPayload.details?.fieldErrors?.fullName?.[0],
+        };
+        setVolunteerErrors(nextErrors);
+        const firstError =
+          nextErrors.skillSummary ||
+          nextErrors.email ||
+          nextErrors.fullName ||
+          errorPayload.message ||
+          errorPayload.error?.message ||
+          "Volunteer onboarding failed.";
+        setVolunteerNotice(firstError);
+        showToast("error", firstError);
         return;
       }
 
@@ -184,9 +274,17 @@ export default function Page() {
           : "Volunteer added. Embedding index is pending."
       );
       setVolunteerForm({ fullName: "", email: "", skillSummary: "" });
+      showToast(
+        "success",
+        embeddingIndexed
+          ? "Volunteer profile created successfully."
+          : "Volunteer created. Embedding indexing is pending."
+      );
       await loadPlatformState();
     } catch {
-      setVolunteerNotice("Could not reach onboarding service.");
+      const message = "Could not reach onboarding service.";
+      setVolunteerNotice(message);
+      showToast("error", message);
     } finally {
       setIsSubmittingVolunteer(false);
     }
@@ -195,6 +293,12 @@ export default function Page() {
   const handleProjectSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setProjectNotice("");
+    setProjectErrors({});
+
+    if (!validateProjectForm()) {
+      return;
+    }
+
     setIsSubmittingProject(true);
 
     try {
@@ -226,17 +330,18 @@ export default function Page() {
       const payload = (await response.json().catch(() => ({}))) as ApiErrorResponse;
 
       if (!response.ok) {
-        setProjectNotice(
-          payload.message || payload.error?.message || "Project creation failed."
-        );
+        const message = payload.message || payload.error?.message || "Project creation failed.";
+        setProjectNotice(message);
+        showToast("error", message);
         return;
       }
 
-      setProjectNotice(
+      const successMessage =
         isAdminSubmission
           ? "Project posted via admin channel and opened for matching."
-          : "Project submitted publicly and opened for volunteer matching."
-      );
+          : "Project submitted publicly and opened for volunteer matching.";
+      setProjectNotice(successMessage);
+      showToast("success", successMessage);
       setProjectForm({
         name: "",
         description: "",
@@ -246,7 +351,9 @@ export default function Page() {
       });
       await loadPlatformState();
     } catch {
-      setProjectNotice("Could not reach project onboarding service.");
+      const message = "Could not reach project onboarding service.";
+      setProjectNotice(message);
+      showToast("error", message);
     } finally {
       setIsSubmittingProject(false);
     }
@@ -321,6 +428,20 @@ export default function Page() {
         </div>
       </nav>
 
+      {toast ? (
+        <div className="fixed right-4 top-4 z-50 max-w-sm">
+          <div
+            className={`rounded-lg border px-4 py-3 text-sm font-medium shadow-lg ${
+              toast.tone === "success"
+                ? "border-emerald-300 bg-emerald-50 text-emerald-800"
+                : "border-red-300 bg-red-50 text-red-700"
+            }`}
+          >
+            {toast.message}
+          </div>
+        </div>
+      ) : null}
+
       <section className="mx-auto w-full max-w-7xl px-6 py-8">
         <div className="grid gap-4 md:grid-cols-3">
           <div className="rounded-xl border-2 border-blue-900 bg-white p-5">
@@ -377,150 +498,257 @@ export default function Page() {
           </div>
         </section>
 
-        <section className="mt-10 grid gap-4 lg:grid-cols-2">
-          <article className="rounded-xl border-2 border-blue-900 bg-white p-5">
-            <div className="mb-4 flex items-center gap-2 text-blue-900">
-              <UserPlus className="h-5 w-5" />
-              <h2 className="text-lg font-semibold">Join As Volunteer</h2>
-            </div>
-
-            <form onSubmit={handleVolunteerSubmit} className="space-y-3">
-              <input
-                value={volunteerForm.fullName}
-                onChange={(event) =>
-                  setVolunteerForm((prev) => ({ ...prev, fullName: event.target.value }))
-                }
-                placeholder="Full name"
-                className="w-full rounded-lg border border-blue-200 px-3 py-2 text-sm text-slate-900 focus:border-blue-900 focus:outline-none"
-                required
-              />
-              <input
-                type="email"
-                value={volunteerForm.email}
-                onChange={(event) =>
-                  setVolunteerForm((prev) => ({ ...prev, email: event.target.value }))
-                }
-                placeholder="Email"
-                className="w-full rounded-lg border border-blue-200 px-3 py-2 text-sm text-slate-900 focus:border-blue-900 focus:outline-none"
-                required
-              />
-              <textarea
-                value={volunteerForm.skillSummary}
-                onChange={(event) =>
-                  setVolunteerForm((prev) => ({
-                    ...prev,
-                    skillSummary: event.target.value,
-                  }))
-                }
-                placeholder="Skills summary (e.g., solar microgrids, GIS mapping, logistics)"
-                className="h-24 w-full rounded-lg border border-blue-200 px-3 py-2 text-sm text-slate-900 focus:border-blue-900 focus:outline-none"
-                minLength={MIN_SKILL_SUMMARY_LENGTH}
-                required
-              />
-              <p className="text-xs text-slate-500">
-                Minimum 20 characters so the AI matcher can index useful context.
-              </p>
+        <section id="intake" className="mt-10 rounded-2xl border border-blue-200 bg-white p-5 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-lg font-semibold text-blue-900">Intake Workspace</h2>
+            <div className="inline-flex rounded-lg border border-blue-200 bg-slate-50 p-1">
               <button
-                type="submit"
-                disabled={isSubmittingVolunteer}
-                className="inline-flex items-center justify-center rounded-lg bg-blue-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:bg-blue-200"
+                type="button"
+                onClick={() => setActiveIntakeTab("volunteer")}
+                className={`rounded-md px-3 py-1.5 text-sm font-semibold transition ${
+                  activeIntakeTab === "volunteer"
+                    ? "bg-blue-900 text-white"
+                    : "text-blue-900 hover:bg-blue-50"
+                }`}
               >
-                {isSubmittingVolunteer ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  "Create Volunteer Profile"
-                )}
+                Volunteer Intake
               </button>
-            </form>
-            {volunteerNotice ? (
-              <p className="mt-3 text-sm text-slate-700">{volunteerNotice}</p>
-            ) : null}
-          </article>
-
-          <article className="rounded-xl border-2 border-blue-900 bg-white p-5">
-            <div className="mb-4 flex items-center gap-2 text-blue-900">
-              <MapPinned className="h-5 w-5" />
-              <h2 className="text-lg font-semibold">Post A Project</h2>
+              <button
+                type="button"
+                onClick={() => setActiveIntakeTab("project")}
+                className={`rounded-md px-3 py-1.5 text-sm font-semibold transition ${
+                  activeIntakeTab === "project"
+                    ? "bg-blue-900 text-white"
+                    : "text-blue-900 hover:bg-blue-50"
+                }`}
+              >
+                Project Intake
+              </button>
             </div>
-            <p className="mb-4 text-sm text-slate-600">
-              Public project posting is enabled. Use an admin key only for protected admin submissions.
-            </p>
+          </div>
 
-            <form onSubmit={handleProjectSubmit} className="space-y-3">
-              <input
-                value={projectForm.name}
-                onChange={(event) =>
-                  setProjectForm((prev) => ({ ...prev, name: event.target.value }))
-                }
-                placeholder="Project title"
-                className="w-full rounded-lg border border-blue-200 px-3 py-2 text-sm text-slate-900 focus:border-blue-900 focus:outline-none"
-                required
-              />
-              <textarea
-                value={projectForm.description}
-                onChange={(event) =>
-                  setProjectForm((prev) => ({ ...prev, description: event.target.value }))
-                }
-                placeholder="Urgency, impact goals, and required skills"
-                className="h-24 w-full rounded-lg border border-blue-200 px-3 py-2 text-sm text-slate-900 focus:border-blue-900 focus:outline-none"
-                required
-              />
-              <div className="grid gap-3 sm:grid-cols-2">
-                <input
-                  type="number"
-                  step="any"
-                  value={projectForm.latitude}
-                  onChange={(event) =>
-                    setProjectForm((prev) => ({ ...prev, latitude: event.target.value }))
-                  }
-                  placeholder="Latitude"
-                  className="w-full rounded-lg border border-blue-200 px-3 py-2 text-sm text-slate-900 focus:border-blue-900 focus:outline-none"
-                  required
-                />
-                <input
-                  type="number"
-                  step="any"
-                  value={projectForm.longitude}
-                  onChange={(event) =>
-                    setProjectForm((prev) => ({ ...prev, longitude: event.target.value }))
-                  }
-                  placeholder="Longitude"
-                  className="w-full rounded-lg border border-blue-200 px-3 py-2 text-sm text-slate-900 focus:border-blue-900 focus:outline-none"
-                  required
-                />
+          {activeIntakeTab === "volunteer" ? (
+            <article className="mt-5 rounded-xl border border-blue-200 bg-white p-4">
+              <div className="mb-4 flex items-center gap-2 text-blue-900">
+                <UserPlus className="h-5 w-5" />
+                <h3 className="text-lg font-semibold">Join As Volunteer</h3>
               </div>
-              <input
-                type="password"
-                value={projectForm.adminKey}
-                onChange={(event) =>
-                  setProjectForm((prev) => ({ ...prev, adminKey: event.target.value }))
-                }
-                placeholder="Optional admin key (leave blank for public posting)"
-                className="w-full rounded-lg border border-blue-200 px-3 py-2 text-sm text-slate-900 focus:border-blue-900 focus:outline-none"
-              />
-              <button
-                type="submit"
-                disabled={isSubmittingProject}
-                className="inline-flex items-center justify-center rounded-lg bg-blue-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:bg-blue-200"
-              >
-                {isSubmittingProject ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  "Publish Project"
-                )}
-              </button>
-            </form>
-            {projectNotice ? (
-              <p className="mt-3 text-sm text-slate-700">{projectNotice}</p>
-            ) : null}
-          </article>
+
+              <form onSubmit={handleVolunteerSubmit} className="space-y-3">
+                <div>
+                  <input
+                    value={volunteerForm.fullName}
+                    onChange={(event) =>
+                      setVolunteerForm((prev) => ({ ...prev, fullName: event.target.value }))
+                    }
+                    placeholder="Full name"
+                    className={`w-full rounded-lg border px-3 py-2 text-sm text-slate-900 focus:outline-none ${
+                      volunteerErrors.fullName
+                        ? "border-red-300 focus:border-red-500"
+                        : "border-blue-200 focus:border-blue-900"
+                    }`}
+                    required
+                  />
+                  {volunteerErrors.fullName ? (
+                    <p className="mt-1 text-xs text-red-600">{volunteerErrors.fullName}</p>
+                  ) : null}
+                </div>
+
+                <div>
+                  <input
+                    type="email"
+                    value={volunteerForm.email}
+                    onChange={(event) =>
+                      setVolunteerForm((prev) => ({ ...prev, email: event.target.value }))
+                    }
+                    placeholder="Email"
+                    className={`w-full rounded-lg border px-3 py-2 text-sm text-slate-900 focus:outline-none ${
+                      volunteerErrors.email
+                        ? "border-red-300 focus:border-red-500"
+                        : "border-blue-200 focus:border-blue-900"
+                    }`}
+                    required
+                  />
+                  {volunteerErrors.email ? (
+                    <p className="mt-1 text-xs text-red-600">{volunteerErrors.email}</p>
+                  ) : null}
+                </div>
+
+                <div>
+                  <textarea
+                    value={volunteerForm.skillSummary}
+                    onChange={(event) =>
+                      setVolunteerForm((prev) => ({
+                        ...prev,
+                        skillSummary: event.target.value,
+                      }))
+                    }
+                    placeholder="Skills summary (e.g., solar microgrids, GIS mapping, logistics)"
+                    className={`h-24 w-full rounded-lg border px-3 py-2 text-sm text-slate-900 focus:outline-none ${
+                      volunteerErrors.skillSummary
+                        ? "border-red-300 focus:border-red-500"
+                        : "border-blue-200 focus:border-blue-900"
+                    }`}
+                    minLength={MIN_SKILL_SUMMARY_LENGTH}
+                    required
+                  />
+                  <div className="mt-1 flex items-center justify-between text-xs">
+                    <p className="text-slate-500">
+                      Minimum 20 characters so the AI matcher can index useful context.
+                    </p>
+                    <p className="text-slate-500">{volunteerForm.skillSummary.trim().length}/20+</p>
+                  </div>
+                  {volunteerErrors.skillSummary ? (
+                    <p className="mt-1 text-xs text-red-600">{volunteerErrors.skillSummary}</p>
+                  ) : null}
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isSubmittingVolunteer}
+                  className="inline-flex items-center justify-center rounded-lg bg-blue-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:bg-blue-200"
+                >
+                  {isSubmittingVolunteer ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    "Create Volunteer Profile"
+                  )}
+                </button>
+              </form>
+              {volunteerNotice ? (
+                <p className="mt-3 text-sm text-slate-700">{volunteerNotice}</p>
+              ) : null}
+            </article>
+          ) : (
+            <article className="mt-5 rounded-xl border border-blue-200 bg-white p-4">
+              <div className="mb-4 flex items-center gap-2 text-blue-900">
+                <MapPinned className="h-5 w-5" />
+                <h3 className="text-lg font-semibold">Post A Project</h3>
+              </div>
+              <p className="mb-4 text-sm text-slate-600">
+                Public project posting is enabled. Use an admin key only for protected admin submissions.
+              </p>
+
+              <form onSubmit={handleProjectSubmit} className="space-y-3">
+                <div>
+                  <input
+                    value={projectForm.name}
+                    onChange={(event) =>
+                      setProjectForm((prev) => ({ ...prev, name: event.target.value }))
+                    }
+                    placeholder="Project title"
+                    className={`w-full rounded-lg border px-3 py-2 text-sm text-slate-900 focus:outline-none ${
+                      projectErrors.name
+                        ? "border-red-300 focus:border-red-500"
+                        : "border-blue-200 focus:border-blue-900"
+                    }`}
+                    required
+                  />
+                  {projectErrors.name ? (
+                    <p className="mt-1 text-xs text-red-600">{projectErrors.name}</p>
+                  ) : null}
+                </div>
+
+                <div>
+                  <textarea
+                    value={projectForm.description}
+                    onChange={(event) =>
+                      setProjectForm((prev) => ({ ...prev, description: event.target.value }))
+                    }
+                    placeholder="Urgency, impact goals, and required skills"
+                    className={`h-24 w-full rounded-lg border px-3 py-2 text-sm text-slate-900 focus:outline-none ${
+                      projectErrors.description
+                        ? "border-red-300 focus:border-red-500"
+                        : "border-blue-200 focus:border-blue-900"
+                    }`}
+                    required
+                  />
+                  {projectErrors.description ? (
+                    <p className="mt-1 text-xs text-red-600">{projectErrors.description}</p>
+                  ) : null}
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <input
+                      type="number"
+                      step="any"
+                      value={projectForm.latitude}
+                      onChange={(event) =>
+                        setProjectForm((prev) => ({ ...prev, latitude: event.target.value }))
+                      }
+                      placeholder="Latitude"
+                      className={`w-full rounded-lg border px-3 py-2 text-sm text-slate-900 focus:outline-none ${
+                        projectErrors.latitude
+                          ? "border-red-300 focus:border-red-500"
+                          : "border-blue-200 focus:border-blue-900"
+                      }`}
+                      required
+                    />
+                    {projectErrors.latitude ? (
+                      <p className="mt-1 text-xs text-red-600">{projectErrors.latitude}</p>
+                    ) : null}
+                  </div>
+                  <div>
+                    <input
+                      type="number"
+                      step="any"
+                      value={projectForm.longitude}
+                      onChange={(event) =>
+                        setProjectForm((prev) => ({ ...prev, longitude: event.target.value }))
+                      }
+                      placeholder="Longitude"
+                      className={`w-full rounded-lg border px-3 py-2 text-sm text-slate-900 focus:outline-none ${
+                        projectErrors.longitude
+                          ? "border-red-300 focus:border-red-500"
+                          : "border-blue-200 focus:border-blue-900"
+                      }`}
+                      required
+                    />
+                    {projectErrors.longitude ? (
+                      <p className="mt-1 text-xs text-red-600">{projectErrors.longitude}</p>
+                    ) : null}
+                  </div>
+                </div>
+                <input
+                  type="password"
+                  value={projectForm.adminKey}
+                  onChange={(event) =>
+                    setProjectForm((prev) => ({ ...prev, adminKey: event.target.value }))
+                  }
+                  placeholder="Optional admin key (leave blank for public posting)"
+                  className="w-full rounded-lg border border-blue-200 px-3 py-2 text-sm text-slate-900 focus:border-blue-900 focus:outline-none"
+                />
+                <button
+                  type="submit"
+                  disabled={isSubmittingProject}
+                  className="inline-flex items-center justify-center rounded-lg bg-blue-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:bg-blue-200"
+                >
+                  {isSubmittingProject ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    "Publish Project"
+                  )}
+                </button>
+              </form>
+              {projectNotice ? (
+                <p className="mt-3 text-sm text-slate-700">{projectNotice}</p>
+              ) : null}
+            </article>
+          )}
         </section>
 
         <section className="mt-8 grid gap-4 lg:grid-cols-2">
           <article className="rounded-xl border border-blue-200 bg-white p-5">
             <h3 className="text-base font-semibold text-blue-900">Recently Onboarded Volunteers</h3>
             <div className="mt-3 space-y-3">
-              {recentVolunteers.length === 0 ? (
+              {isDirectoryLoading ? (
+                <>
+                  <div className="h-24 animate-pulse rounded-lg bg-slate-100" />
+                  <div className="h-24 animate-pulse rounded-lg bg-slate-100" />
+                  <div className="h-24 animate-pulse rounded-lg bg-slate-100" />
+                </>
+              ) : recentVolunteers.length === 0 ? (
                 <p className="text-sm text-slate-500">No volunteers yet.</p>
               ) : (
                 recentVolunteers.map((volunteer) => (
@@ -540,7 +768,13 @@ export default function Page() {
           <article className="rounded-xl border border-blue-200 bg-white p-5">
             <h3 className="text-base font-semibold text-blue-900">Open Project Intake</h3>
             <div className="mt-3 space-y-3">
-              {openProjects.length === 0 ? (
+              {isDirectoryLoading ? (
+                <>
+                  <div className="h-20 animate-pulse rounded-lg bg-slate-100" />
+                  <div className="h-20 animate-pulse rounded-lg bg-slate-100" />
+                  <div className="h-20 animate-pulse rounded-lg bg-slate-100" />
+                </>
+              ) : openProjects.length === 0 ? (
                 <p className="text-sm text-slate-500">No active projects yet.</p>
               ) : (
                 openProjects.map((project) => (
@@ -597,22 +831,59 @@ export default function Page() {
           </h3>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {results.map((volunteer) => (
-              <article
-                key={volunteer.volunteer_id}
-                className="rounded-xl border border-slate-200 border-t-2 border-t-emerald-500 bg-white p-5 shadow-sm"
-              >
-                <div className="mb-2 flex items-center gap-2 text-blue-900">
-                  <Users className="h-4 w-4" />
-                  <p className="font-semibold">{volunteer.full_name}</p>
-                </div>
-                <p className="mb-2 text-sm text-slate-600">{volunteer.email}</p>
-                <p className="mb-3 text-sm text-slate-700">{volunteer.skill_summary}</p>
-                <p className="text-sm font-medium text-emerald-700">
-                  Match Score: {Number(volunteer.cosine_similarity).toFixed(3)}
-                </p>
+            {results.length === 0 && !isMatching ? (
+              <article className="col-span-full rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm text-slate-500">
+                No matches yet. Enter a skill and run AI matching.
               </article>
-            ))}
+            ) : null}
+
+            {results.map((volunteer) => {
+              const score = Math.max(
+                0,
+                Math.min(1, Number(volunteer.cosine_similarity) || 0)
+              );
+              const scorePct = Math.round(score * 100);
+              const relevanceLabel =
+                scorePct >= 70 ? "High Relevance" : scorePct >= 40 ? "Medium Relevance" : "Low Relevance";
+              const relevanceClass =
+                scorePct >= 70
+                  ? "border-emerald-300 bg-emerald-50 text-emerald-700"
+                  : scorePct >= 40
+                    ? "border-blue-300 bg-blue-50 text-blue-700"
+                    : "border-slate-300 bg-slate-100 text-slate-700";
+
+              return (
+                <article
+                  key={volunteer.volunteer_id}
+                  className="rounded-xl border border-slate-200 border-t-2 border-t-emerald-500 bg-white p-5 shadow-sm"
+                >
+                  <div className="mb-2 flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2 text-blue-900">
+                      <Users className="h-4 w-4" />
+                      <p className="font-semibold">{volunteer.full_name}</p>
+                    </div>
+                    <span
+                      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${relevanceClass}`}
+                    >
+                      {relevanceLabel}
+                    </span>
+                  </div>
+                  <p className="mb-2 text-sm text-slate-600">{volunteer.email}</p>
+                  <p className="mb-3 text-sm text-slate-700">{volunteer.skill_summary}</p>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-semibold text-emerald-700">
+                      Match Score: {scorePct}%
+                    </p>
+                    <a
+                      href={`mailto:${volunteer.email}?subject=TurkNode Project Match Opportunity`}
+                      className="inline-flex items-center justify-center rounded-md border border-blue-200 px-2.5 py-1 text-xs font-semibold text-blue-900 transition hover:bg-blue-50"
+                    >
+                      Invite
+                    </a>
+                  </div>
+                </article>
+              );
+            })}
           </div>
         </section>
       </section>
