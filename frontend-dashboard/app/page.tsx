@@ -6,11 +6,20 @@ import {
   Database,
   Leaf,
   Loader2,
+  LogIn,
+  LogOut,
   MapPinned,
   Search,
+  ShieldCheck,
+  ShieldX,
   UserPlus,
   Users,
 } from "lucide-react";
+import DonationPanel from "./components/DonationPanel";
+import OpenProjectIntakePanel, {
+  type ProjectPreview,
+  type ProjectStatus,
+} from "./components/OpenProjectIntakePanel";
 
 type MatchVolunteer = {
   volunteer_id: string;
@@ -35,14 +44,6 @@ type VolunteerPreview = {
   createdAt: string;
 };
 
-type ProjectPreview = {
-  id: string;
-  name: string;
-  description: string;
-  status: "OPEN" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
-  createdAt: string;
-};
-
 type ApiErrorResponse = {
   message?: string;
   error?: {
@@ -62,6 +63,7 @@ type VolunteerFormErrors = {
 type ProjectFormErrors = {
   name?: string;
   description?: string;
+  contactEmail?: string;
   latitude?: string;
   longitude?: string;
 };
@@ -71,11 +73,63 @@ type ToastState = {
   message: string;
 };
 
+type SessionUser = {
+  uid: string;
+  email: string;
+  displayName: string;
+  hasManagerAccess: boolean;
+};
+
+type EmailAuthState = {
+  email: string;
+  password: string;
+};
+
 const ORCHESTRATOR_URL =
   process.env.NEXT_PUBLIC_ORCHESTRATOR_URL || "http://localhost:3000";
 const INTELLIGENCE_URL =
   process.env.NEXT_PUBLIC_INTELLIGENCE_URL || "http://localhost:8001";
 const MIN_SKILL_SUMMARY_LENGTH = 20;
+const MANAGER_CLAIM_KEYS = [
+  "projectManager",
+  "project_manager",
+  "manager",
+  "admin",
+] as const;
+
+function claimHasManagerAccess(value: unknown) {
+  if (value === true) {
+    return true;
+  }
+
+  if (typeof value !== "string") {
+    return false;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  return (
+    normalized === "true" ||
+    normalized === "1" ||
+    normalized === "manager" ||
+    normalized === "admin" ||
+    normalized === "projectmanager" ||
+    normalized === "project_manager"
+  );
+}
+
+function hasManagerAccessFromClaims(claims: Record<string, unknown>) {
+  return MANAGER_CLAIM_KEYS.some((claimKey) =>
+    claimHasManagerAccess(claims[claimKey])
+  );
+}
+
+function getClientErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error && error.message.trim().length > 0) {
+    return error.message;
+  }
+
+  return fallback;
+}
 
 export default function Page() {
   const [status, setStatus] = useState<"loading" | "connected" | "disconnected">(
@@ -100,6 +154,7 @@ export default function Page() {
   const [projectForm, setProjectForm] = useState({
     name: "",
     description: "",
+    contactEmail: "",
     latitude: "",
     longitude: "",
     adminKey: "",
@@ -115,6 +170,16 @@ export default function Page() {
   const [volunteerErrors, setVolunteerErrors] = useState<VolunteerFormErrors>({});
   const [projectErrors, setProjectErrors] = useState<ProjectFormErrors>({});
   const [toast, setToast] = useState<ToastState | null>(null);
+  const [authStatus, setAuthStatus] = useState<"loading" | "ready" | "unavailable">(
+    "loading"
+  );
+  const [sessionUser, setSessionUser] = useState<SessionUser | null>(null);
+  const [isAuthActionPending, setIsAuthActionPending] = useState(false);
+  const [showEmailSignIn, setShowEmailSignIn] = useState(false);
+  const [emailAuth, setEmailAuth] = useState<EmailAuthState>({
+    email: "",
+    password: "",
+  });
 
   const showToast = (tone: ToastState["tone"], message: string) => {
     setToast({ tone, message });
@@ -153,14 +218,38 @@ export default function Page() {
       errors.description = "Description must be at least 20 characters.";
     }
 
-    const latitude = Number(projectForm.latitude);
-    if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) {
-      errors.latitude = "Latitude must be between -90 and 90.";
+    const contactEmail = projectForm.contactEmail.trim();
+    if (contactEmail.length > 0 && !/^\S+@\S+\.\S+$/.test(contactEmail)) {
+      errors.contactEmail = "Enter a valid contact email.";
     }
 
-    const longitude = Number(projectForm.longitude);
-    if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
-      errors.longitude = "Longitude must be between -180 and 180.";
+    const normalizedLatitude = projectForm.latitude.trim();
+    const normalizedLongitude = projectForm.longitude.trim();
+    const hasLatitude = normalizedLatitude.length > 0;
+    const hasLongitude = normalizedLongitude.length > 0;
+
+    if (hasLatitude !== hasLongitude) {
+      const message = "Provide both latitude and longitude together, or leave both blank.";
+      if (!hasLatitude) {
+        errors.latitude = message;
+      }
+      if (!hasLongitude) {
+        errors.longitude = message;
+      }
+    }
+
+    if (hasLatitude) {
+      const latitude = Number(normalizedLatitude);
+      if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) {
+        errors.latitude = "Latitude must be between -90 and 90.";
+      }
+    }
+
+    if (hasLongitude) {
+      const longitude = Number(normalizedLongitude);
+      if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
+        errors.longitude = "Longitude must be between -180 and 180.";
+      }
     }
 
     setProjectErrors(errors);
@@ -213,10 +302,172 @@ export default function Page() {
   }, []);
 
   useEffect(() => {
+    let isCancelled = false;
+    let unsubscribe: (() => void) | undefined;
+
+    const loadAuthState = async () => {
+      try {
+        const [{ auth }, { onAuthStateChanged }] = await Promise.all([
+          import("../lib/firebase"),
+          import("firebase/auth"),
+        ]);
+
+        unsubscribe = onAuthStateChanged(auth, async (nextUser) => {
+          if (isCancelled) {
+            return;
+          }
+
+          if (!nextUser) {
+            setSessionUser(null);
+            setAuthStatus("ready");
+            return;
+          }
+
+          try {
+            const idToken = await nextUser.getIdTokenResult();
+            const managerAccess = hasManagerAccessFromClaims(
+              idToken.claims as Record<string, unknown>
+            );
+
+            setSessionUser({
+              uid: nextUser.uid,
+              email: nextUser.email || "",
+              displayName: nextUser.displayName || "",
+              hasManagerAccess: managerAccess,
+            });
+            setVolunteerForm((prev) =>
+              prev.email.trim().length > 0 || !nextUser.email
+                ? prev
+                : { ...prev, email: nextUser.email }
+            );
+          } catch {
+            setSessionUser({
+              uid: nextUser.uid,
+              email: nextUser.email || "",
+              displayName: nextUser.displayName || "",
+              hasManagerAccess: false,
+            });
+          } finally {
+            setAuthStatus("ready");
+          }
+        });
+      } catch {
+        if (isCancelled) {
+          return;
+        }
+
+        setSessionUser(null);
+        setAuthStatus("unavailable");
+      }
+    };
+
+    void loadAuthState();
+
+    return () => {
+      isCancelled = true;
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     if (!toast) return undefined;
     const timer = setTimeout(() => setToast(null), 3500);
     return () => clearTimeout(timer);
   }, [toast]);
+
+  const handleGoogleSignIn = async () => {
+    setIsAuthActionPending(true);
+    try {
+      const [{ auth }, { GoogleAuthProvider, signInWithPopup }] = await Promise.all([
+        import("../lib/firebase"),
+        import("firebase/auth"),
+      ]);
+
+      await signInWithPopup(auth, new GoogleAuthProvider());
+      showToast("success", "Signed in with Google.");
+      setShowEmailSignIn(false);
+      setEmailAuth((prev) => ({ ...prev, password: "" }));
+    } catch (error) {
+      showToast("error", getClientErrorMessage(error, "Unable to sign in with Google."));
+    } finally {
+      setIsAuthActionPending(false);
+    }
+  };
+
+  const handleEmailSignIn = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const normalizedEmail = emailAuth.email.trim();
+    const password = emailAuth.password;
+
+    if (!normalizedEmail || !password) {
+      showToast("error", "Email and password are required.");
+      return;
+    }
+
+    setIsAuthActionPending(true);
+    try {
+      const [{ auth }, { signInWithEmailAndPassword }] = await Promise.all([
+        import("../lib/firebase"),
+        import("firebase/auth"),
+      ]);
+
+      await signInWithEmailAndPassword(auth, normalizedEmail, password);
+      showToast("success", "Signed in with email.");
+      setEmailAuth({ email: normalizedEmail, password: "" });
+      setShowEmailSignIn(false);
+    } catch (error) {
+      showToast("error", getClientErrorMessage(error, "Unable to sign in with email."));
+    } finally {
+      setIsAuthActionPending(false);
+    }
+  };
+
+  const handleSignOut = async () => {
+    setIsAuthActionPending(true);
+    try {
+      const [{ auth }, { signOut }] = await Promise.all([
+        import("../lib/firebase"),
+        import("firebase/auth"),
+      ]);
+
+      await signOut(auth);
+      showToast("success", "Signed out.");
+    } catch (error) {
+      showToast("error", getClientErrorMessage(error, "Unable to sign out."));
+    } finally {
+      setIsAuthActionPending(false);
+    }
+  };
+
+  const handleRefreshClaims = async () => {
+    setIsAuthActionPending(true);
+    try {
+      const { auth } = await import("../lib/firebase");
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        showToast("error", "Sign in first to refresh claims.");
+        return;
+      }
+
+      await currentUser.getIdToken(true);
+      const idToken = await currentUser.getIdTokenResult();
+      setSessionUser({
+        uid: currentUser.uid,
+        email: currentUser.email || "",
+        displayName: currentUser.displayName || "",
+        hasManagerAccess: hasManagerAccessFromClaims(
+          idToken.claims as Record<string, unknown>
+        ),
+      });
+      showToast("success", "Session claims refreshed.");
+    } catch (error) {
+      showToast("error", getClientErrorMessage(error, "Unable to refresh claims."));
+    } finally {
+      setIsAuthActionPending(false);
+    }
+  };
 
   const handleVolunteerSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -302,6 +553,9 @@ export default function Page() {
     setIsSubmittingProject(true);
 
     try {
+      const normalizedLatitude = projectForm.latitude.trim();
+      const normalizedLongitude = projectForm.longitude.trim();
+
       const adminKey = projectForm.adminKey.trim();
       const isAdminSubmission = adminKey.length > 0;
       const headers: Record<string, string> = {
@@ -321,8 +575,9 @@ export default function Page() {
         body: JSON.stringify({
           name: projectForm.name,
           description: projectForm.description,
-          latitude: Number(projectForm.latitude),
-          longitude: Number(projectForm.longitude),
+          contactEmail: projectForm.contactEmail.trim() || undefined,
+          latitude: normalizedLatitude.length > 0 ? Number(normalizedLatitude) : undefined,
+          longitude: normalizedLongitude.length > 0 ? Number(normalizedLongitude) : undefined,
           status: "OPEN",
         }),
       });
@@ -345,6 +600,7 @@ export default function Page() {
       setProjectForm({
         name: "",
         description: "",
+        contactEmail: "",
         latitude: "",
         longitude: "",
         adminKey: "",
@@ -405,7 +661,7 @@ export default function Page() {
   }, [status]);
 
   const projectStatusClasses = useMemo(
-    () => ({
+    (): Record<ProjectStatus, string> => ({
       OPEN: "border-emerald-200 bg-emerald-50 text-emerald-700",
       IN_PROGRESS: "border-blue-200 bg-blue-50 text-blue-700",
       COMPLETED: "border-slate-200 bg-slate-100 text-slate-700",
@@ -417,14 +673,146 @@ export default function Page() {
   return (
     <main className="min-h-screen bg-white">
       <nav className="border-b border-blue-200 bg-white">
-        <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-4">
+        <div className="mx-auto flex w-full max-w-7xl flex-col gap-3 px-6 py-4">
           <div className="text-2xl font-bold text-blue-900">TurkNode</div>
-          <div
-            className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-sm font-semibold ${statusClasses}`}
-          >
-            <Database className="h-4 w-4" />
-            {status === "loading" ? "Checking Docker DB..." : `Status: Docker DB ${status}`}
+          <div className="flex flex-wrap items-center gap-2">
+            <div
+              className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-sm font-semibold ${statusClasses}`}
+            >
+              <Database className="h-4 w-4" />
+              {status === "loading" ? "Checking Docker DB..." : `Status: Docker DB ${status}`}
+            </div>
+
+            {authStatus === "loading" ? (
+              <div className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-700">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Checking session...
+              </div>
+            ) : authStatus === "unavailable" ? (
+              <div className="inline-flex items-center gap-2 rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-sm font-semibold text-amber-700">
+                <ShieldX className="h-4 w-4" />
+                Firebase auth not configured.
+              </div>
+            ) : sessionUser ? (
+              <>
+                <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-sm font-semibold text-blue-900">
+                  <span className="max-w-44 truncate sm:max-w-60">
+                    {sessionUser.email || sessionUser.displayName || sessionUser.uid}
+                  </span>
+                  <span
+                    className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${
+                      sessionUser.hasManagerAccess
+                        ? "border-emerald-300 bg-emerald-50 text-emerald-700"
+                        : "border-slate-300 bg-slate-100 text-slate-700"
+                    }`}
+                  >
+                    {sessionUser.hasManagerAccess ? "Manager" : "Volunteer"}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    void handleRefreshClaims();
+                  }}
+                  disabled={isAuthActionPending}
+                  className="inline-flex items-center justify-center rounded-lg border border-blue-200 px-3 py-1.5 text-sm font-semibold text-blue-900 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:border-blue-100 disabled:text-blue-300"
+                >
+                  {isAuthActionPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Refresh Claims"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    void handleSignOut();
+                  }}
+                  disabled={isAuthActionPending}
+                  className="inline-flex items-center gap-2 rounded-lg border border-blue-900 px-3 py-1.5 text-sm font-semibold text-blue-900 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:border-blue-200 disabled:text-blue-300"
+                >
+                  {isAuthActionPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <LogOut className="h-4 w-4" />
+                  )}
+                  Sign Out
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    void handleGoogleSignIn();
+                  }}
+                  disabled={isAuthActionPending}
+                  className="inline-flex items-center gap-2 rounded-lg bg-blue-900 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:bg-blue-200"
+                >
+                  {isAuthActionPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <LogIn className="h-4 w-4" />
+                  )}
+                  Sign In With Google
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowEmailSignIn((prev) => !prev)}
+                  disabled={isAuthActionPending}
+                  className="inline-flex items-center justify-center rounded-lg border border-blue-200 px-3 py-1.5 text-sm font-semibold text-blue-900 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:border-blue-100 disabled:text-blue-300"
+                >
+                  {showEmailSignIn ? "Hide Email Login" : "Use Email/Password"}
+                </button>
+              </>
+            )}
           </div>
+
+          {authStatus === "ready" && !sessionUser && showEmailSignIn ? (
+            <form
+              onSubmit={(event) => {
+                void handleEmailSignIn(event);
+              }}
+              className="grid w-full gap-2 sm:grid-cols-[minmax(180px,1fr)_minmax(180px,1fr)_auto]"
+            >
+              <input
+                type="email"
+                value={emailAuth.email}
+                onChange={(event) =>
+                  setEmailAuth((prev) => ({ ...prev, email: event.target.value }))
+                }
+                placeholder="Email"
+                className="w-full rounded-lg border border-blue-200 px-3 py-2 text-sm text-slate-900 focus:border-blue-900 focus:outline-none"
+                required
+              />
+              <input
+                type="password"
+                value={emailAuth.password}
+                onChange={(event) =>
+                  setEmailAuth((prev) => ({ ...prev, password: event.target.value }))
+                }
+                placeholder="Password"
+                className="w-full rounded-lg border border-blue-200 px-3 py-2 text-sm text-slate-900 focus:border-blue-900 focus:outline-none"
+                required
+              />
+              <button
+                type="submit"
+                disabled={isAuthActionPending}
+                className="inline-flex items-center justify-center rounded-lg border border-blue-900 px-3 py-2 text-sm font-semibold text-blue-900 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:border-blue-200 disabled:text-blue-300"
+              >
+                {isAuthActionPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Sign In"}
+              </button>
+            </form>
+          ) : null}
+
+          {authStatus === "ready" && sessionUser ? (
+            <p className="inline-flex items-center gap-1 text-sm text-slate-600">
+              {sessionUser.hasManagerAccess ? (
+                <ShieldCheck className="h-4 w-4 text-emerald-700" />
+              ) : (
+                <ShieldX className="h-4 w-4 text-slate-500" />
+              )}
+              {sessionUser.hasManagerAccess
+                ? "Manager tools are enabled for this session."
+                : "Volunteer session active. Manager tools remain locked."}
+            </p>
+          ) : null}
         </div>
       </nav>
 
@@ -486,7 +874,7 @@ export default function Page() {
             <article className="rounded-lg border border-blue-200 bg-white p-3">
               <p className="text-sm font-semibold text-blue-900">2. Post Urgent Projects</p>
               <p className="mt-1 text-sm text-slate-700">
-                Register a sustainability project with geolocation and urgency context.
+                Register a sustainability project with urgency context and optional location.
               </p>
             </article>
             <article className="rounded-lg border border-blue-200 bg-white p-3">
@@ -497,6 +885,8 @@ export default function Page() {
             </article>
           </div>
         </section>
+
+        <DonationPanel />
 
         <section id="intake" className="mt-10 rounded-2xl border border-blue-200 bg-white p-5 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -626,7 +1016,7 @@ export default function Page() {
                 <h3 className="text-lg font-semibold">Post A Project</h3>
               </div>
               <p className="mb-4 text-sm text-slate-600">
-                Public project posting is enabled. Use an admin key only for protected admin submissions.
+                Public project posting is enabled. Coordinates are optional; use an admin key only for protected admin submissions.
               </p>
 
               <form onSubmit={handleProjectSubmit} className="space-y-3">
@@ -668,6 +1058,25 @@ export default function Page() {
                   ) : null}
                 </div>
 
+                <div>
+                  <input
+                    type="email"
+                    value={projectForm.contactEmail}
+                    onChange={(event) =>
+                      setProjectForm((prev) => ({ ...prev, contactEmail: event.target.value }))
+                    }
+                    placeholder="Project contact email for applications (optional)"
+                    className={`w-full rounded-lg border px-3 py-2 text-sm text-slate-900 focus:outline-none ${
+                      projectErrors.contactEmail
+                        ? "border-red-300 focus:border-red-500"
+                        : "border-blue-200 focus:border-blue-900"
+                    }`}
+                  />
+                  {projectErrors.contactEmail ? (
+                    <p className="mt-1 text-xs text-red-600">{projectErrors.contactEmail}</p>
+                  ) : null}
+                </div>
+
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div>
                     <input
@@ -677,13 +1086,12 @@ export default function Page() {
                       onChange={(event) =>
                         setProjectForm((prev) => ({ ...prev, latitude: event.target.value }))
                       }
-                      placeholder="Latitude"
+                      placeholder="Latitude (optional)"
                       className={`w-full rounded-lg border px-3 py-2 text-sm text-slate-900 focus:outline-none ${
                         projectErrors.latitude
                           ? "border-red-300 focus:border-red-500"
                           : "border-blue-200 focus:border-blue-900"
                       }`}
-                      required
                     />
                     {projectErrors.latitude ? (
                       <p className="mt-1 text-xs text-red-600">{projectErrors.latitude}</p>
@@ -697,13 +1105,12 @@ export default function Page() {
                       onChange={(event) =>
                         setProjectForm((prev) => ({ ...prev, longitude: event.target.value }))
                       }
-                      placeholder="Longitude"
+                      placeholder="Longitude (optional)"
                       className={`w-full rounded-lg border px-3 py-2 text-sm text-slate-900 focus:outline-none ${
                         projectErrors.longitude
                           ? "border-red-300 focus:border-red-500"
                           : "border-blue-200 focus:border-blue-900"
                       }`}
-                      required
                     />
                     {projectErrors.longitude ? (
                       <p className="mt-1 text-xs text-red-600">{projectErrors.longitude}</p>
@@ -765,36 +1172,17 @@ export default function Page() {
             </div>
           </article>
 
-          <article className="rounded-xl border border-blue-200 bg-white p-5">
-            <h3 className="text-base font-semibold text-blue-900">Open Project Intake</h3>
-            <div className="mt-3 space-y-3">
-              {isDirectoryLoading ? (
-                <>
-                  <div className="h-20 animate-pulse rounded-lg bg-slate-100" />
-                  <div className="h-20 animate-pulse rounded-lg bg-slate-100" />
-                  <div className="h-20 animate-pulse rounded-lg bg-slate-100" />
-                </>
-              ) : openProjects.length === 0 ? (
-                <p className="text-sm text-slate-500">No active projects yet.</p>
-              ) : (
-                openProjects.map((project) => (
-                  <div key={project.id} className="rounded-lg border border-slate-200 p-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <p className="font-medium text-blue-900">{project.name}</p>
-                      <span
-                        className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${
-                          projectStatusClasses[project.status]
-                        }`}
-                      >
-                        {project.status}
-                      </span>
-                    </div>
-                    <p className="mt-1 text-sm text-slate-700">{project.description}</p>
-                  </div>
-                ))
-              )}
-            </div>
-          </article>
+          <OpenProjectIntakePanel
+            projects={openProjects}
+            isLoading={isDirectoryLoading}
+            orchestratorUrl={ORCHESTRATOR_URL}
+            projectStatusClasses={projectStatusClasses}
+            isAuthenticated={Boolean(sessionUser)}
+            hasManagerAccess={Boolean(sessionUser?.hasManagerAccess)}
+            signedInEmail={sessionUser?.email || ""}
+            onProjectChanged={loadPlatformState}
+            showToast={showToast}
+          />
         </section>
 
         <section className="mt-10">
