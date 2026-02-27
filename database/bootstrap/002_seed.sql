@@ -8,17 +8,19 @@ SET full_name = EXCLUDED.full_name,
     email = EXCLUDED.email,
     is_active = EXCLUDED.is_active;
 
-INSERT INTO projects (id, name, description, status) VALUES
+INSERT INTO projects (id, name, description, status, contact_email) VALUES
   (
     '770e8400-e29b-41d4-a716-446655441111',
     'Test Sustainability Project',
     'Pilot project for local preview and integration testing.',
-    'OPEN'
+    'OPEN',
+    'projects@enturk.org'
   )
 ON CONFLICT (id) DO UPDATE
 SET name = EXCLUDED.name,
     description = EXCLUDED.description,
-    status = EXCLUDED.status;
+    status = EXCLUDED.status,
+    contact_email = EXCLUDED.contact_email;
 
 DELETE FROM volunteer_vectors
 WHERE user_id IN (
