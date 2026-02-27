@@ -33,6 +33,14 @@ const volunteerSchema = z.object({
   isActive: z.boolean().optional().default(true),
 });
 
+const volunteerListSchema = z.object({
+  limit: z.coerce.number().int().min(1).max(50).optional().default(10),
+  includeInactive: z
+    .enum(['true', 'false'])
+    .optional()
+    .default('false'),
+});
+
 async function indexVolunteerSkills({ userId, skillSummary }) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), INTELLIGENCE_TIMEOUT_MS);
@@ -63,6 +71,88 @@ async function indexVolunteerSkills({ userId, skillSummary }) {
     clearTimeout(timeout);
   }
 }
+
+router.get('/', async (req, res) => {
+  const parsed = volunteerListSchema.safeParse(req.query ?? {});
+
+  if (!parsed.success) {
+    return res.status(400).json({
+      success: false,
+      errorCode: 'VALIDATION_ERROR',
+      message: 'Invalid volunteer list query parameters.',
+      details: parsed.error.flatten(),
+    });
+  }
+
+  const { limit, includeInactive } = parsed.data;
+  const onlyActive = includeInactive !== 'true';
+
+  try {
+    const withVectorsSql = `
+      SELECT
+        u.id,
+        u.full_name,
+        u.email,
+        u.is_active,
+        u.created_at,
+        COALESCE(vv.skill_summary, '') AS skill_summary
+      FROM users u
+      LEFT JOIN volunteer_vectors vv ON vv.user_id = u.id
+      ${onlyActive ? 'WHERE u.is_active = TRUE' : ''}
+      ORDER BY u.created_at DESC
+      LIMIT $1
+    `;
+
+    const result = await pool.query(withVectorsSql, [limit]);
+
+    return res.status(200).json({
+      data: result.rows.map((row) => ({
+        id: row.id,
+        fullName: row.full_name,
+        email: row.email,
+        isActive: row.is_active,
+        createdAt: row.created_at,
+        skillSummary: row.skill_summary,
+      })),
+      meta: {
+        returned: result.rowCount,
+      },
+    });
+  } catch (err) {
+    if (err && err.code === '42P01') {
+      const fallbackSql = `
+        SELECT id, full_name, email, is_active, created_at
+        FROM users
+        ${onlyActive ? 'WHERE is_active = TRUE' : ''}
+        ORDER BY created_at DESC
+        LIMIT $1
+      `;
+
+      const fallbackResult = await pool.query(fallbackSql, [limit]);
+      return res.status(200).json({
+        data: fallbackResult.rows.map((row) => ({
+          id: row.id,
+          fullName: row.full_name,
+          email: row.email,
+          isActive: row.is_active,
+          createdAt: row.created_at,
+          skillSummary: '',
+        })),
+        meta: {
+          returned: fallbackResult.rowCount,
+          warning: 'volunteer_vectors table not available; skill summaries omitted.',
+        },
+      });
+    }
+
+    console.error('Volunteer list failed', err);
+    return res.status(500).json({
+      success: false,
+      errorCode: 'VOLUNTEER_LIST_FAILED',
+      message: 'Unable to list volunteer profiles.',
+    });
+  }
+});
 
 router.post('/', volunteerRateLimiter, async (req, res) => {
   const parsed = volunteerSchema.safeParse(req.body ?? {});

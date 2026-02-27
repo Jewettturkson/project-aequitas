@@ -34,6 +34,21 @@ const projectSchema = z.object({
     .default('OPEN'),
 });
 
+const publicProjectSchema = z.object({
+  name: z.string().trim().min(3).max(180),
+  description: z.string().trim().min(20).max(4000),
+  latitude: z.coerce.number().gte(-90).lte(90),
+  longitude: z.coerce.number().gte(-180).lte(180),
+});
+
+const projectListSchema = z.object({
+  limit: z.coerce.number().int().min(1).max(50).optional().default(10),
+  scope: z.enum(['active', 'all']).optional().default('active'),
+  status: z
+    .enum(['OPEN', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'])
+    .optional(),
+});
+
 async function getProjectColumnCapabilities(dbClient) {
   const sql = `
     SELECT
@@ -58,6 +73,213 @@ async function getProjectColumnCapabilities(dbClient) {
   };
 }
 
+async function insertProject(dbClient, data) {
+  const capabilities = await getProjectColumnCapabilities(dbClient);
+
+  if (capabilities.geoPointRequired && !capabilities.hasGeoPoint) {
+    throw new Error(
+      'projects.geo_point marked required but column metadata unavailable.'
+    );
+  }
+
+  const columns = ['name'];
+  const values = [data.name];
+  const valueSql = ['$1'];
+  let nextParamIndex = 2;
+
+  if (capabilities.hasDescription) {
+    columns.push('description');
+    values.push(data.description);
+    valueSql.push(`$${nextParamIndex}`);
+    nextParamIndex += 1;
+  }
+
+  if (capabilities.hasStatus) {
+    columns.push('status');
+    values.push(data.status);
+    valueSql.push(`$${nextParamIndex}`);
+    nextParamIndex += 1;
+  }
+
+  if (capabilities.hasGeoPoint) {
+    columns.push('geo_point');
+    values.push(data.longitude, data.latitude);
+    valueSql.push(`POINT($${nextParamIndex}, $${nextParamIndex + 1})`);
+    nextParamIndex += 2;
+  }
+
+  const insertSql = `
+    INSERT INTO projects (${columns.join(', ')})
+    VALUES (${valueSql.join(', ')})
+    RETURNING id, name
+  `;
+
+  const result = await dbClient.query(insertSql, values);
+  const project = result.rows[0];
+
+  return {
+    id: project.id,
+    name: project.name,
+    status: data.status,
+    description: data.description,
+    location: {
+      latitude: data.latitude,
+      longitude: data.longitude,
+    },
+  };
+}
+
+router.get('/', async (req, res) => {
+  const parsed = projectListSchema.safeParse(req.query ?? {});
+
+  if (!parsed.success) {
+    return res.status(400).json({
+      success: false,
+      errorCode: 'VALIDATION_ERROR',
+      message: 'Invalid project list query parameters.',
+      details: parsed.error.flatten(),
+    });
+  }
+
+  const { limit, scope, status } = parsed.data;
+  let dbClient;
+
+  try {
+    dbClient = await pool.connect();
+    const capabilities = await getProjectColumnCapabilities(dbClient);
+
+    const selectColumns = ['id', 'name', 'created_at'];
+    if (capabilities.hasDescription) {
+      selectColumns.push('description');
+    }
+    if (capabilities.hasStatus) {
+      selectColumns.push('status');
+    }
+
+    const filterClauses = [];
+    const params = [];
+    let nextParamIndex = 1;
+
+    if (capabilities.hasStatus) {
+      if (status) {
+        filterClauses.push(`status = $${nextParamIndex}`);
+        params.push(status);
+        nextParamIndex += 1;
+      } else if (scope === 'active') {
+        filterClauses.push(`status IN ('OPEN', 'IN_PROGRESS')`);
+      }
+    }
+
+    params.push(limit);
+    const limitSql = `$${nextParamIndex}`;
+    const whereSql =
+      filterClauses.length > 0 ? `WHERE ${filterClauses.join(' AND ')}` : '';
+
+    const sql = `
+      SELECT ${selectColumns.join(', ')}
+      FROM projects
+      ${whereSql}
+      ORDER BY created_at DESC
+      LIMIT ${limitSql}
+    `;
+
+    const result = await dbClient.query(sql, params);
+
+    return res.status(200).json({
+      data: result.rows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        description: row.description || '',
+        status: row.status || 'OPEN',
+        createdAt: row.created_at,
+      })),
+      meta: {
+        returned: result.rowCount,
+        scope,
+      },
+    });
+  } catch (err) {
+    console.error('Project list failed', err);
+    return res.status(500).json({
+      success: false,
+      errorCode: 'PROJECT_LIST_FAILED',
+      message: 'Unable to list projects.',
+    });
+  } finally {
+    if (dbClient) {
+      dbClient.release();
+    }
+  }
+});
+
+router.post('/public', projectRateLimiter, async (req, res) => {
+  const parsed = publicProjectSchema.safeParse(req.body ?? {});
+
+  if (!parsed.success) {
+    return res.status(400).json({
+      success: false,
+      errorCode: 'VALIDATION_ERROR',
+      message: 'Invalid project payload.',
+      details: parsed.error.flatten(),
+    });
+  }
+
+  const data = {
+    ...parsed.data,
+    status: 'OPEN',
+  };
+
+  let dbClient;
+
+  try {
+    dbClient = await pool.connect();
+    await dbClient.query('BEGIN');
+    await dbClient.query('SET LOCAL TRANSACTION ISOLATION LEVEL SERIALIZABLE');
+
+    const project = await insertProject(dbClient, data);
+    await dbClient.query('COMMIT');
+
+    return res.status(201).json({
+      success: true,
+      source: 'public',
+      projectId: project.id,
+      project,
+    });
+  } catch (err) {
+    if (dbClient) {
+      await dbClient.query('ROLLBACK');
+    }
+
+    if (err && err.code === '40001') {
+      return res.status(409).json({
+        success: false,
+        errorCode: 'SERIALIZATION_FAILURE',
+        message: 'Transaction conflict. Retry request.',
+      });
+    }
+
+    if (err && err.code === '23502') {
+      return res.status(400).json({
+        success: false,
+        errorCode: 'PROJECT_SCHEMA_CONSTRAINT',
+        message:
+          'Project table has stricter required fields than provided payload. Validate schema and retry.',
+      });
+    }
+
+    console.error('Public project create failed', err);
+    return res.status(500).json({
+      success: false,
+      errorCode: 'PROJECT_CREATE_FAILED',
+      message: 'Unable to create project.',
+    });
+  } finally {
+    if (dbClient) {
+      dbClient.release();
+    }
+  }
+});
+
 router.post('/', projectRateLimiter, projectAdminAuth, async (req, res) => {
   const parsed = projectSchema.safeParse(req.body ?? {});
 
@@ -77,65 +299,14 @@ router.post('/', projectRateLimiter, projectAdminAuth, async (req, res) => {
     dbClient = await pool.connect();
     await dbClient.query('BEGIN');
     await dbClient.query('SET LOCAL TRANSACTION ISOLATION LEVEL SERIALIZABLE');
-
-    const capabilities = await getProjectColumnCapabilities(dbClient);
-
-    if (capabilities.geoPointRequired && !capabilities.hasGeoPoint) {
-      throw new Error(
-        'projects.geo_point marked required but column metadata unavailable.'
-      );
-    }
-
-    const columns = ['name'];
-    const values = [data.name];
-    const valueSql = ['$1'];
-    let nextParamIndex = 2;
-
-    if (capabilities.hasDescription) {
-      columns.push('description');
-      values.push(data.description);
-      valueSql.push(`$${nextParamIndex}`);
-      nextParamIndex += 1;
-    }
-
-    if (capabilities.hasStatus) {
-      columns.push('status');
-      values.push(data.status);
-      valueSql.push(`$${nextParamIndex}`);
-      nextParamIndex += 1;
-    }
-
-    if (capabilities.hasGeoPoint) {
-      columns.push('geo_point');
-      values.push(data.longitude, data.latitude);
-      valueSql.push(`POINT($${nextParamIndex}, $${nextParamIndex + 1})`);
-      nextParamIndex += 2;
-    }
-
-    const insertSql = `
-      INSERT INTO projects (${columns.join(', ')})
-      VALUES (${valueSql.join(', ')})
-      RETURNING id, name
-    `;
-
-    const result = await dbClient.query(insertSql, values);
-    const project = result.rows[0];
-
+    const project = await insertProject(dbClient, data);
     await dbClient.query('COMMIT');
 
     return res.status(201).json({
       success: true,
+      source: 'admin',
       projectId: project.id,
-      project: {
-        id: project.id,
-        name: project.name,
-        status: data.status,
-        description: data.description,
-        location: {
-          latitude: data.latitude,
-          longitude: data.longitude,
-        },
-      },
+      project,
     });
   } catch (err) {
     if (dbClient) {

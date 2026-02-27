@@ -96,6 +96,19 @@ curl -i -X POST http://localhost:3000/api/v1/projects \
   }'
 ```
 
+Create a public project posting (no admin key):
+
+```bash
+curl -i -X POST http://localhost:3000/api/v1/projects/public \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name":"Community Water Rapid Response",
+    "description":"Urgent field response requiring logistics, sanitation planning, and volunteer operations support.",
+    "latitude":5.6037,
+    "longitude":-0.1870
+  }'
+```
+
 ## Deployment env vars for onboarding flow
 
 Orchestrator service:

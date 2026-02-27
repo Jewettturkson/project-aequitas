@@ -26,6 +26,23 @@ type Stats = {
   activeProjects: number;
 };
 
+type VolunteerPreview = {
+  id: string;
+  fullName: string;
+  email: string;
+  isActive: boolean;
+  skillSummary: string;
+  createdAt: string;
+};
+
+type ProjectPreview = {
+  id: string;
+  name: string;
+  description: string;
+  status: "OPEN" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
+  createdAt: string;
+};
+
 type ApiErrorResponse = {
   message?: string;
   error?: {
@@ -47,6 +64,8 @@ export default function Page() {
     totalImpact: 0,
     activeProjects: 0,
   });
+  const [recentVolunteers, setRecentVolunteers] = useState<VolunteerPreview[]>([]);
+  const [openProjects, setOpenProjects] = useState<ProjectPreview[]>([]);
   const [skill, setSkill] = useState("");
   const [isMatching, setIsMatching] = useState(false);
   const [results, setResults] = useState<MatchVolunteer[]>([]);
@@ -70,9 +89,11 @@ export default function Page() {
 
   const loadPlatformState = async () => {
     try {
-      const [statusRes, statsRes] = await Promise.all([
+      const [statusRes, statsRes, volunteersRes, projectsRes] = await Promise.all([
         fetch(`${ORCHESTRATOR_URL}/api/v1/status`),
         fetch(`${ORCHESTRATOR_URL}/api/v1/stats`),
+        fetch(`${ORCHESTRATOR_URL}/api/v1/volunteers?limit=6`),
+        fetch(`${ORCHESTRATOR_URL}/api/v1/projects?scope=active&limit=6`),
       ]);
 
       if (statusRes.ok) {
@@ -84,6 +105,20 @@ export default function Page() {
       if (statsRes.ok) {
         const data = (await statsRes.json()) as Stats;
         setStats(data);
+      }
+
+      if (volunteersRes.ok) {
+        const data = (await volunteersRes.json()) as {
+          data?: VolunteerPreview[];
+        };
+        setRecentVolunteers(data.data || []);
+      }
+
+      if (projectsRes.ok) {
+        const data = (await projectsRes.json()) as {
+          data?: ProjectPreview[];
+        };
+        setOpenProjects(data.data || []);
       }
     } catch {
       setStatus("disconnected");
@@ -144,15 +179,20 @@ export default function Page() {
     setIsSubmittingProject(true);
 
     try {
+      const adminKey = projectForm.adminKey.trim();
+      const isAdminSubmission = adminKey.length > 0;
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
       };
-      const adminKey = projectForm.adminKey.trim();
-      if (adminKey.length > 0) {
+      if (isAdminSubmission) {
         headers["X-Admin-Key"] = adminKey;
       }
 
-      const response = await fetch(`${ORCHESTRATOR_URL}/api/v1/projects`, {
+      const endpoint = isAdminSubmission
+        ? `${ORCHESTRATOR_URL}/api/v1/projects`
+        : `${ORCHESTRATOR_URL}/api/v1/projects/public`;
+
+      const response = await fetch(endpoint, {
         method: "POST",
         headers,
         body: JSON.stringify({
@@ -173,7 +213,11 @@ export default function Page() {
         return;
       }
 
-      setProjectNotice("Project posted and opened for volunteer matching.");
+      setProjectNotice(
+        isAdminSubmission
+          ? "Project posted via admin channel and opened for matching."
+          : "Project submitted publicly and opened for volunteer matching."
+      );
       setProjectForm({
         name: "",
         description: "",
@@ -234,6 +278,16 @@ export default function Page() {
     return "border-slate-300 bg-slate-100 text-slate-700";
   }, [status]);
 
+  const projectStatusClasses = useMemo(
+    () => ({
+      OPEN: "border-emerald-200 bg-emerald-50 text-emerald-700",
+      IN_PROGRESS: "border-blue-200 bg-blue-50 text-blue-700",
+      COMPLETED: "border-slate-200 bg-slate-100 text-slate-700",
+      CANCELLED: "border-red-200 bg-red-50 text-red-700",
+    }),
+    []
+  );
+
   return (
     <main className="min-h-screen bg-white">
       <nav className="border-b border-blue-200 bg-white">
@@ -279,6 +333,30 @@ export default function Page() {
             <p className="text-4xl font-bold text-emerald-600">{stats.activeProjects}</p>
           </div>
         </div>
+
+        <section className="mt-6 rounded-xl border border-blue-200 bg-blue-50/40 p-5">
+          <h2 className="text-lg font-semibold text-blue-900">How TurkNode Works</h2>
+          <div className="mt-3 grid gap-3 md:grid-cols-3">
+            <article className="rounded-lg border border-blue-200 bg-white p-3">
+              <p className="text-sm font-semibold text-blue-900">1. Onboard Volunteers</p>
+              <p className="mt-1 text-sm text-slate-700">
+                Add a volunteer profile with skill summary. The platform indexes embeddings automatically.
+              </p>
+            </article>
+            <article className="rounded-lg border border-blue-200 bg-white p-3">
+              <p className="text-sm font-semibold text-blue-900">2. Post Urgent Projects</p>
+              <p className="mt-1 text-sm text-slate-700">
+                Register a sustainability project with geolocation and urgency context.
+              </p>
+            </article>
+            <article className="rounded-lg border border-blue-200 bg-white p-3">
+              <p className="text-sm font-semibold text-blue-900">3. Run AI Matching</p>
+              <p className="mt-1 text-sm text-slate-700">
+                Use the matcher to rank top-fit volunteers for rapid deployment.
+              </p>
+            </article>
+          </div>
+        </section>
 
         <section className="mt-10 grid gap-4 lg:grid-cols-2">
           <article className="rounded-xl border-2 border-blue-900 bg-white p-5">
@@ -341,6 +419,9 @@ export default function Page() {
               <MapPinned className="h-5 w-5" />
               <h2 className="text-lg font-semibold">Post A Project</h2>
             </div>
+            <p className="mb-4 text-sm text-slate-600">
+              Public project posting is enabled. Use an admin key only for protected admin submissions.
+            </p>
 
             <form onSubmit={handleProjectSubmit} className="space-y-3">
               <input
@@ -391,7 +472,7 @@ export default function Page() {
                 onChange={(event) =>
                   setProjectForm((prev) => ({ ...prev, adminKey: event.target.value }))
                 }
-                placeholder="Admin key (required only if posting is protected)"
+                placeholder="Optional admin key (leave blank for public posting)"
                 className="w-full rounded-lg border border-blue-200 px-3 py-2 text-sm text-slate-900 focus:border-blue-900 focus:outline-none"
               />
               <button
@@ -409,6 +490,53 @@ export default function Page() {
             {projectNotice ? (
               <p className="mt-3 text-sm text-slate-700">{projectNotice}</p>
             ) : null}
+          </article>
+        </section>
+
+        <section className="mt-8 grid gap-4 lg:grid-cols-2">
+          <article className="rounded-xl border border-blue-200 bg-white p-5">
+            <h3 className="text-base font-semibold text-blue-900">Recently Onboarded Volunteers</h3>
+            <div className="mt-3 space-y-3">
+              {recentVolunteers.length === 0 ? (
+                <p className="text-sm text-slate-500">No volunteers yet.</p>
+              ) : (
+                recentVolunteers.map((volunteer) => (
+                  <div
+                    key={volunteer.id}
+                    className="rounded-lg border border-slate-200 p-3"
+                  >
+                    <p className="font-medium text-blue-900">{volunteer.fullName}</p>
+                    <p className="text-sm text-slate-600">{volunteer.email}</p>
+                    <p className="mt-1 text-sm text-slate-700">{volunteer.skillSummary || "Skill summary pending"}</p>
+                  </div>
+                ))
+              )}
+            </div>
+          </article>
+
+          <article className="rounded-xl border border-blue-200 bg-white p-5">
+            <h3 className="text-base font-semibold text-blue-900">Open Project Intake</h3>
+            <div className="mt-3 space-y-3">
+              {openProjects.length === 0 ? (
+                <p className="text-sm text-slate-500">No active projects yet.</p>
+              ) : (
+                openProjects.map((project) => (
+                  <div key={project.id} className="rounded-lg border border-slate-200 p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="font-medium text-blue-900">{project.name}</p>
+                      <span
+                        className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${
+                          projectStatusClasses[project.status]
+                        }`}
+                      >
+                        {project.status}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-sm text-slate-700">{project.description}</p>
+                  </div>
+                ))
+              )}
+            </div>
           </article>
         </section>
 
