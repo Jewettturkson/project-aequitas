@@ -188,6 +188,9 @@ curl -i -X PATCH http://localhost:3000/api/v1/projects/<project-id>/status \
 Orchestrator service:
 
 ```text
+DATABASE_URL=<managed-postgres-url>
+DB_SSL_MODE=require
+CORS_ALLOWED_ORIGINS=https://nodeenturk.org,https://www.nodeenturk.org,https://app.nodeenturk.org
 INTELLIGENCE_URL=https://ai.nodeenturk.org
 INTELLIGENCE_SERVICE_TOKEN=<shared-secret>
 PROJECT_ADMIN_KEY=<optional-admin-key-for-project-posting>

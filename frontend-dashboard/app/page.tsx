@@ -670,14 +670,26 @@ export default function Page() {
     []
   );
 
+  const projectCategories = [
+    "All",
+    "Business strategy",
+    "Data & analytics",
+    "Design & media",
+    "Finance",
+    "Human resources",
+    "Management",
+    "Marketing",
+    "Software & IT",
+  ];
+
   return (
-    <main className="min-h-screen bg-white">
-      <nav className="border-b border-blue-200 bg-white">
-        <div className="mx-auto flex w-full max-w-7xl flex-col gap-3 px-6 py-4">
-          <div className="text-2xl font-bold text-blue-900">TurkNode</div>
+    <main className="min-h-screen bg-[#efeee8] text-[#1f1c1d]">
+      <header className="border-b border-[#3d3738] bg-[#1f1c1d] text-[#f7f5ee]">
+        <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-4 px-6 py-5">
+          <div className="text-4xl font-black tracking-tight">TurkNode</div>
           <div className="flex flex-wrap items-center gap-2">
             <div
-              className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-sm font-semibold ${statusClasses}`}
+              className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-sm font-semibold ${statusClasses} bg-opacity-100`}
             >
               <Database className="h-4 w-4" />
               {status === "loading" ? "Checking Docker DB..." : `Status: Docker DB ${status}`}
@@ -743,7 +755,7 @@ export default function Page() {
                     void handleGoogleSignIn();
                   }}
                   disabled={isAuthActionPending}
-                  className="inline-flex items-center gap-2 rounded-lg bg-blue-900 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:bg-blue-200"
+                  className="inline-flex items-center gap-2 rounded-full bg-[#0d7dd7] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#1b8ceb] disabled:cursor-not-allowed disabled:bg-slate-500"
                 >
                   {isAuthActionPending ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -756,15 +768,16 @@ export default function Page() {
                   type="button"
                   onClick={() => setShowEmailSignIn((prev) => !prev)}
                   disabled={isAuthActionPending}
-                  className="inline-flex items-center justify-center rounded-lg border border-blue-200 px-3 py-1.5 text-sm font-semibold text-blue-900 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:border-blue-100 disabled:text-blue-300"
+                  className="inline-flex items-center justify-center rounded-full border border-[#e5ded8] px-5 py-2 text-sm font-semibold text-[#f7f5ee] transition hover:bg-[#2a2728] disabled:cursor-not-allowed disabled:border-slate-500 disabled:text-slate-400"
                 >
                   {showEmailSignIn ? "Hide Email Login" : "Use Email/Password"}
                 </button>
               </>
             )}
           </div>
-
-          {authStatus === "ready" && !sessionUser && showEmailSignIn ? (
+        </div>
+        {authStatus === "ready" && !sessionUser && showEmailSignIn ? (
+          <div className="mx-auto max-w-7xl px-6 pb-4">
             <form
               onSubmit={(event) => {
                 void handleEmailSignIn(event);
@@ -778,7 +791,7 @@ export default function Page() {
                   setEmailAuth((prev) => ({ ...prev, email: event.target.value }))
                 }
                 placeholder="Email"
-                className="w-full rounded-lg border border-blue-200 px-3 py-2 text-sm text-slate-900 focus:border-blue-900 focus:outline-none"
+                className="w-full rounded-lg border border-[#5d5658] bg-[#2a2728] px-3 py-2 text-sm text-[#f7f5ee] focus:border-[#0d7dd7] focus:outline-none"
                 required
               />
               <input
@@ -788,25 +801,59 @@ export default function Page() {
                   setEmailAuth((prev) => ({ ...prev, password: event.target.value }))
                 }
                 placeholder="Password"
-                className="w-full rounded-lg border border-blue-200 px-3 py-2 text-sm text-slate-900 focus:border-blue-900 focus:outline-none"
+                className="w-full rounded-lg border border-[#5d5658] bg-[#2a2728] px-3 py-2 text-sm text-[#f7f5ee] focus:border-[#0d7dd7] focus:outline-none"
                 required
               />
               <button
                 type="submit"
                 disabled={isAuthActionPending}
-                className="inline-flex items-center justify-center rounded-lg border border-blue-900 px-3 py-2 text-sm font-semibold text-blue-900 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:border-blue-200 disabled:text-blue-300"
+                className="inline-flex items-center justify-center rounded-lg border border-[#f7f5ee] px-3 py-2 text-sm font-semibold text-[#f7f5ee] transition hover:bg-[#2a2728] disabled:cursor-not-allowed disabled:border-slate-500 disabled:text-slate-400"
               >
                 {isAuthActionPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Sign In"}
               </button>
             </form>
-          ) : null}
+          </div>
+        ) : null}
+      </header>
 
+      <div className="bg-[#b247a3] px-6 py-3 text-sm font-semibold text-white">
+        <div className="mx-auto w-full max-w-7xl">
+          Sign in or register with TurkNode to unlock full volunteer opportunities.
+        </div>
+      </div>
+
+      <div className="border-b border-[#3d3738] bg-[#252123] px-6 py-3">
+        <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center gap-6 text-sm text-[#e7e1da]">
+          {projectCategories.map((category, index) => (
+            <button
+              key={category}
+              type="button"
+              className={`transition hover:text-white ${
+                index === 0 ? "font-semibold text-white" : ""
+              }`}
+            >
+              {category}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <section className="relative overflow-hidden bg-[#252123] px-6 py-20 text-white">
+        <div className="pointer-events-none absolute left-[-120px] top-[-60px] h-72 w-72 rotate-12 rounded-[40%] bg-[#dfe36e]/90 blur-[1px]" />
+        <div className="pointer-events-none absolute left-40 top-[-90px] h-56 w-56 rotate-45 rounded-[15%] bg-[#d977cf]/80" />
+        <div className="mx-auto max-w-7xl">
+          <h1 className="text-center text-4xl font-black tracking-tight md:text-6xl">
+            Volunteer your skills anytime, anywhere
+          </h1>
+          <p className="mt-4 text-center text-xl text-[#e4ddd7]">
+            Virtual skills-based volunteering made easy
+          </p>
           {authStatus === "ready" && sessionUser ? (
-            <p className="inline-flex items-center gap-1 text-sm text-slate-600">
+            <p className="mt-6 inline-flex items-center gap-1 rounded-full border border-white/25 bg-white/10 px-4 py-1.5 text-sm text-[#efe9e2]">
               {sessionUser.hasManagerAccess ? (
-                <ShieldCheck className="h-4 w-4 text-emerald-700" />
+                <ShieldCheck className="h-4 w-4 text-emerald-300" />
               ) : (
-                <ShieldX className="h-4 w-4 text-slate-500" />
+                <ShieldX className="h-4 w-4 text-slate-300" />
               )}
               {sessionUser.hasManagerAccess
                 ? "Manager tools are enabled for this session."
@@ -814,7 +861,7 @@ export default function Page() {
             </p>
           ) : null}
         </div>
-      </nav>
+      </section>
 
       {toast ? (
         <div className="fixed right-4 top-4 z-50 max-w-sm">
@@ -830,22 +877,57 @@ export default function Page() {
         </div>
       ) : null}
 
+      <section className="border-y border-[#cec5bd] bg-[#f5f3ee]">
+        <div className="mx-auto grid w-full max-w-7xl gap-3 px-6 py-3 md:grid-cols-5">
+          <input
+            type="text"
+            placeholder="Causes"
+            className="rounded-md border border-[#d2c9c1] bg-white px-4 py-3 text-sm"
+          />
+          <input
+            type="text"
+            placeholder="Skills"
+            className="rounded-md border border-[#d2c9c1] bg-white px-4 py-3 text-sm"
+          />
+          <input
+            type="text"
+            placeholder="Type"
+            className="rounded-md border border-[#d2c9c1] bg-white px-4 py-3 text-sm"
+          />
+          <button
+            type="button"
+            className="rounded-md border border-[#d2c9c1] bg-white px-4 py-3 text-left text-sm font-semibold text-[#0d7dd7]"
+          >
+            Clear
+          </button>
+          <div className="flex items-center rounded-md border border-[#d2c9c1] bg-white px-4 py-3">
+            <Search className="mr-2 h-4 w-4 text-slate-500" />
+            <input
+              value={skill}
+              onChange={(event) => setSkill(event.target.value)}
+              placeholder="Search all"
+              className="w-full bg-transparent text-sm outline-none"
+            />
+          </div>
+        </div>
+      </section>
+
       <section className="mx-auto w-full max-w-7xl px-6 py-8">
-        <div className="grid gap-4 md:grid-cols-3">
-          <div className="rounded-xl border-2 border-blue-900 bg-white p-5">
-            <div className="mb-2 flex items-center gap-2 text-blue-900">
+        <div className="mb-6 grid gap-4 md:grid-cols-3">
+          <div className="rounded-xl border border-[#d8cec5] bg-white p-5 shadow-sm">
+            <div className="mb-2 flex items-center gap-2 text-[#223d7a]">
               <Users className="h-5 w-5" />
               <span className="font-medium">Volunteers</span>
             </div>
-            <p className="text-4xl font-bold text-emerald-600">{stats.volunteers}</p>
+            <p className="text-4xl font-bold text-[#123a7a]">{stats.volunteers}</p>
           </div>
 
-          <div className="rounded-xl border-2 border-blue-900 bg-white p-5">
-            <div className="mb-2 flex items-center gap-2 text-blue-900">
+          <div className="rounded-xl border border-[#d8cec5] bg-white p-5 shadow-sm">
+            <div className="mb-2 flex items-center gap-2 text-[#223d7a]">
               <Leaf className="h-5 w-5" />
               <span className="font-medium">Total Impact</span>
             </div>
-            <p className="text-4xl font-bold text-blue-900">
+            <p className="text-4xl font-bold text-[#123a7a]">
               {stats.totalImpact.toLocaleString(undefined, {
                 minimumFractionDigits: 0,
                 maximumFractionDigits: 2,
@@ -853,44 +935,79 @@ export default function Page() {
             </p>
           </div>
 
-          <div className="rounded-xl border-2 border-blue-900 bg-white p-5">
-            <div className="mb-2 flex items-center gap-2 text-blue-900">
+          <div className="rounded-xl border border-[#d8cec5] bg-white p-5 shadow-sm">
+            <div className="mb-2 flex items-center gap-2 text-[#223d7a]">
               <Briefcase className="h-5 w-5" />
               <span className="font-medium">Active Projects</span>
             </div>
-            <p className="text-4xl font-bold text-emerald-600">{stats.activeProjects}</p>
+            <p className="text-4xl font-bold text-[#123a7a]">{stats.activeProjects}</p>
           </div>
         </div>
 
-        <section className="mt-6 rounded-xl border border-blue-200 bg-blue-50/40 p-5">
-          <h2 className="text-lg font-semibold text-blue-900">How TurkNode Works</h2>
-          <div className="mt-3 grid gap-3 md:grid-cols-3">
-            <article className="rounded-lg border border-blue-200 bg-white p-3">
-              <p className="text-sm font-semibold text-blue-900">1. Onboard Volunteers</p>
-              <p className="mt-1 text-sm text-slate-700">
-                Add a volunteer profile with skill summary. The platform indexes embeddings automatically.
-              </p>
-            </article>
-            <article className="rounded-lg border border-blue-200 bg-white p-3">
-              <p className="text-sm font-semibold text-blue-900">2. Post Urgent Projects</p>
-              <p className="mt-1 text-sm text-slate-700">
-                Register a sustainability project with urgency context and optional location.
-              </p>
-            </article>
-            <article className="rounded-lg border border-blue-200 bg-white p-3">
-              <p className="text-sm font-semibold text-blue-900">3. Run AI Matching</p>
-              <p className="mt-1 text-sm text-slate-700">
-                Use the matcher to rank top-fit volunteers for rapid deployment.
-              </p>
-            </article>
+        <div className="mt-10 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-4xl font-black tracking-tight text-[#1f1c1d]">All projects</h2>
+            <p className="mt-1 text-lg text-[#4e4a47]">
+              Showing {openProjects.length > 0 ? `1-${openProjects.length}` : "0"} opportunities
+            </p>
           </div>
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-[#4e4a47]">Sort by</span>
+            <select className="rounded-md border border-[#cfc6be] bg-white px-4 py-2">
+              <option>Recommended</option>
+              <option>Newest</option>
+              <option>Status</option>
+            </select>
+          </div>
+        </div>
+
+        <section className="mt-6 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+          {isDirectoryLoading ? (
+            <>
+              <div className="h-80 animate-pulse rounded-xl bg-[#ded7d0]" />
+              <div className="h-80 animate-pulse rounded-xl bg-[#ded7d0]" />
+              <div className="h-80 animate-pulse rounded-xl bg-[#ded7d0]" />
+            </>
+          ) : openProjects.length === 0 ? (
+            <article className="col-span-full rounded-xl border border-dashed border-[#b8aea4] bg-[#f7f4ef] p-8 text-center text-[#5e5854]">
+              No active projects yet. Use Project Intake below to publish one.
+            </article>
+          ) : (
+            openProjects.map((project, index) => (
+              <article key={project.id} className="overflow-hidden rounded-xl border border-[#d8cec5] bg-white shadow-sm">
+                <div
+                  className={`h-48 ${
+                    index % 3 === 0
+                      ? "bg-[radial-gradient(circle_at_top,_#d7ea62,_#f3c9de_45%,_#b44ec2)]"
+                      : index % 3 === 1
+                        ? "bg-[linear-gradient(120deg,_#7fb26d,_#376f95)]"
+                        : "bg-[linear-gradient(120deg,_#f9cc59,_#f37e76)]"
+                  }`}
+                />
+                <div className="p-4">
+                  <div className="mb-2 flex items-center justify-between gap-2 text-xs uppercase tracking-wide text-[#6c6560]">
+                    <span>Project</span>
+                    <span
+                      className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold normal-case ${projectStatusClasses[project.status]}`}
+                    >
+                      {project.status.replace("_", " ")}
+                    </span>
+                  </div>
+                  <h3 className="text-3xl font-black leading-tight text-[#1f1c1d]">{project.name}</h3>
+                  <p className="mt-2 max-h-16 overflow-hidden text-sm text-[#4e4a47]">
+                    {project.description}
+                  </p>
+                </div>
+              </article>
+            ))
+          )}
         </section>
 
         <DonationPanel />
 
-        <section id="intake" className="mt-10 rounded-2xl border border-blue-200 bg-white p-5 shadow-sm">
+        <section id="intake" className="mt-10 rounded-2xl border border-[#d8cec5] bg-white p-5 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-lg font-semibold text-blue-900">Intake Workspace</h2>
+            <h2 className="text-lg font-semibold text-[#223d7a]">Intake Workspace</h2>
             <div className="inline-flex rounded-lg border border-blue-200 bg-slate-50 p-1">
               <button
                 type="button"
@@ -1186,7 +1303,7 @@ export default function Page() {
         </section>
 
         <section className="mt-10">
-          <h2 className="text-center text-xl font-semibold text-blue-900">AI Matcher</h2>
+          <h2 className="text-center text-xl font-semibold text-[#223d7a]">AI Matcher</h2>
 
           <form
             onSubmit={handleMatch}

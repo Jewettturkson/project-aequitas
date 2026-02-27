@@ -8,13 +8,54 @@ const statsRouter = require('./routes/stats');
 const app = express();
 app.set('trust proxy', 1);
 
+const defaultAllowedOrigins = [
+  'https://nodeenturk.org',
+  'https://www.nodeenturk.org',
+  'https://app.nodeenturk.org',
+];
+
+function normalizeOrigin(value) {
+  return value.trim().toLowerCase().replace(/\/+$/, '');
+}
+
+function parseAllowedOrigins() {
+  const configured = (process.env.CORS_ALLOWED_ORIGINS || '')
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean);
+
+  const merged = [...defaultAllowedOrigins, ...configured];
+  return new Set(merged.map(normalizeOrigin));
+}
+
+const allowedOrigins = parseAllowedOrigins();
+
+function isAllowedOrigin(origin) {
+  const normalized = normalizeOrigin(origin);
+  if (allowedOrigins.has(normalized)) {
+    return true;
+  }
+
+  // Allow any secure subdomain of nodeenturk.org.
+  if (/^https:\/\/([a-z0-9-]+\.)*nodeenturk\.org$/.test(normalized)) {
+    return true;
+  }
+
+  return false;
+}
+
 app.use((req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  const requestOrigin = req.headers.origin;
+  if (typeof requestOrigin === 'string' && isAllowedOrigin(requestOrigin)) {
+    res.setHeader('Access-Control-Allow-Origin', requestOrigin);
+    res.setHeader('Vary', 'Origin');
+  }
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,OPTIONS');
   res.setHeader(
     'Access-Control-Allow-Headers',
-    'Content-Type,Authorization,X-Admin-Key'
+    'Content-Type,Authorization,X-Admin-Key,X-Requested-With'
   );
+  res.setHeader('Access-Control-Max-Age', '86400');
   if (req.method === 'OPTIONS') {
     return res.status(204).end();
   }
