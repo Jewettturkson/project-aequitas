@@ -15,7 +15,6 @@ import {
   UserPlus,
   Users,
 } from "lucide-react";
-import DonationPanel from "./components/DonationPanel";
 import OpenProjectIntakePanel, {
   type ProjectPreview,
   type ProjectStatus,
@@ -96,6 +95,27 @@ const MANAGER_CLAIM_KEYS = [
   "manager",
   "admin",
 ] as const;
+
+const PROJECT_CATEGORY_KEYWORDS: Record<string, string[]> = {
+  "Business strategy": ["strategy", "planning", "operations", "growth", "roadmap"],
+  "Data & analytics": ["data", "analytics", "dashboard", "sql", "analysis", "insight"],
+  "Design & media": ["design", "ui", "ux", "brand", "media", "content", "video"],
+  Finance: ["finance", "budget", "accounting", "funding", "cost"],
+  "Human resources": ["hr", "recruit", "hiring", "people", "onboarding", "talent"],
+  Management: ["manage", "manager", "lead", "coordination", "program"],
+  Marketing: ["marketing", "campaign", "seo", "social", "outreach", "community"],
+  "Software & IT": [
+    "software",
+    "engineer",
+    "developer",
+    "app",
+    "api",
+    "web",
+    "it",
+    "cloud",
+    "database",
+  ],
+};
 
 function claimHasManagerAccess(value: unknown) {
   if (value === true) {
@@ -180,6 +200,12 @@ export default function Page() {
     email: "",
     password: "",
   });
+  const [activeProjectCategory, setActiveProjectCategory] = useState("All");
+  const [causeFilter, setCauseFilter] = useState("");
+  const [skillsFilter, setSkillsFilter] = useState("");
+  const [typeFilter, setTypeFilter] = useState("");
+  const [searchFilter, setSearchFilter] = useState("");
+  const [projectSort, setProjectSort] = useState("recommended");
 
   const showToast = (tone: ToastState["tone"], message: string) => {
     setToast({ tone, message });
@@ -682,6 +708,75 @@ export default function Page() {
     "Software & IT",
   ];
 
+  const filteredProjects = useMemo(() => {
+    if (activeProjectCategory === "All") {
+      return openProjects;
+    }
+
+    const keywords = PROJECT_CATEGORY_KEYWORDS[activeProjectCategory] || [];
+    if (keywords.length === 0) {
+      return openProjects;
+    }
+
+    return openProjects.filter((project) => {
+      const haystack = `${project.name} ${project.description}`.toLowerCase();
+      return keywords.some((keyword) => haystack.includes(keyword));
+    });
+  }, [activeProjectCategory, openProjects]);
+
+  const visibleProjects = useMemo(() => {
+    const normalizedCause = causeFilter.trim().toLowerCase();
+    const normalizedSkills = skillsFilter.trim().toLowerCase();
+    const normalizedSearch = searchFilter.trim().toLowerCase();
+    const normalizedType = typeFilter.trim().toUpperCase();
+
+    const filtered = filteredProjects.filter((project) => {
+      const haystack = `${project.name} ${project.description}`.toLowerCase();
+      const matchesCause = !normalizedCause || haystack.includes(normalizedCause);
+      const matchesSkills = !normalizedSkills || haystack.includes(normalizedSkills);
+      const matchesSearch = !normalizedSearch || haystack.includes(normalizedSearch);
+      const matchesType =
+        !normalizedType ||
+        project.status === normalizedType ||
+        (normalizedType === "ACTIVE" &&
+          (project.status === "OPEN" || project.status === "IN_PROGRESS"));
+
+      return matchesCause && matchesSkills && matchesSearch && matchesType;
+    });
+
+    if (projectSort === "newest") {
+      return [...filtered].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+    }
+
+    if (projectSort === "status") {
+      const rank: Record<ProjectStatus, number> = {
+        OPEN: 1,
+        IN_PROGRESS: 2,
+        COMPLETED: 3,
+        CANCELLED: 4,
+      };
+      return [...filtered].sort((a, b) => rank[a.status] - rank[b.status]);
+    }
+
+    return filtered;
+  }, [
+    causeFilter,
+    filteredProjects,
+    projectSort,
+    searchFilter,
+    skillsFilter,
+    typeFilter,
+  ]);
+
+  const clearProjectFilters = () => {
+    setActiveProjectCategory("All");
+    setCauseFilter("");
+    setSkillsFilter("");
+    setTypeFilter("");
+    setSearchFilter("");
+    setProjectSort("recommended");
+  };
+
   return (
     <main className="min-h-screen bg-white text-[#0b2e59]">
       <header className="border-b border-[#0b2e59] bg-[#0b2e59] text-white">
@@ -824,12 +919,15 @@ export default function Page() {
 
       <div className="border-b border-[#0b2e59] bg-[#0b2e59] px-6 py-3">
         <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center gap-6 text-sm text-[#dbe7f7]">
-          {projectCategories.map((category, index) => (
+          {projectCategories.map((category) => (
             <button
               key={category}
               type="button"
-              className={`transition hover:text-white ${
-                index === 0 ? "font-semibold text-white" : ""
+              onClick={() => setActiveProjectCategory(category)}
+              className={`border-b-2 pb-1 transition hover:text-white ${
+                activeProjectCategory === category
+                  ? "border-[#12a150] font-semibold text-white"
+                  : "border-transparent"
               }`}
             >
               {category}
@@ -882,20 +980,27 @@ export default function Page() {
           <input
             type="text"
             placeholder="Causes"
+            value={causeFilter}
+            onChange={(event) => setCauseFilter(event.target.value)}
             className="rounded-md border border-[#d2c9c1] bg-white px-4 py-3 text-sm"
           />
           <input
             type="text"
             placeholder="Skills"
+            value={skillsFilter}
+            onChange={(event) => setSkillsFilter(event.target.value)}
             className="rounded-md border border-[#d2c9c1] bg-white px-4 py-3 text-sm"
           />
           <input
             type="text"
             placeholder="Type"
+            value={typeFilter}
+            onChange={(event) => setTypeFilter(event.target.value)}
             className="rounded-md border border-[#d2c9c1] bg-white px-4 py-3 text-sm"
           />
           <button
             type="button"
+            onClick={clearProjectFilters}
             className="rounded-md border border-[#d2c9c1] bg-white px-4 py-3 text-left text-sm font-semibold text-[#0d7dd7]"
           >
             Clear
@@ -903,8 +1008,8 @@ export default function Page() {
           <div className="flex items-center rounded-md border border-[#d2c9c1] bg-white px-4 py-3">
             <Search className="mr-2 h-4 w-4 text-slate-500" />
             <input
-              value={skill}
-              onChange={(event) => setSkill(event.target.value)}
+              value={searchFilter}
+              onChange={(event) => setSearchFilter(event.target.value)}
               placeholder="Search all"
               className="w-full bg-transparent text-sm outline-none"
             />
@@ -948,15 +1053,19 @@ export default function Page() {
           <div>
             <h2 className="text-4xl font-black tracking-tight text-[#0b2e59]">All projects</h2>
             <p className="mt-1 text-lg text-[#4e4a47]">
-              Showing {openProjects.length > 0 ? `1-${openProjects.length}` : "0"} opportunities
+              Showing {visibleProjects.length > 0 ? `1-${visibleProjects.length}` : "0"} opportunities
             </p>
           </div>
           <div className="flex items-center gap-3">
             <span className="text-sm text-[#4e4a47]">Sort by</span>
-            <select className="rounded-md border border-[#cfc6be] bg-white px-4 py-2">
-              <option>Recommended</option>
-              <option>Newest</option>
-              <option>Status</option>
+            <select
+              value={projectSort}
+              onChange={(event) => setProjectSort(event.target.value)}
+              className="rounded-md border border-[#cfc6be] bg-white px-4 py-2"
+            >
+              <option value="recommended">Recommended</option>
+              <option value="newest">Newest</option>
+              <option value="status">Status</option>
             </select>
           </div>
         </div>
@@ -968,12 +1077,12 @@ export default function Page() {
               <div className="h-80 animate-pulse rounded-xl bg-[#ded7d0]" />
               <div className="h-80 animate-pulse rounded-xl bg-[#ded7d0]" />
             </>
-          ) : openProjects.length === 0 ? (
+          ) : visibleProjects.length === 0 ? (
             <article className="col-span-full rounded-xl border border-dashed border-[#b8aea4] bg-[#f7f4ef] p-8 text-center text-[#5e5854]">
-              No active projects yet. Use Project Intake below to publish one.
+              No projects match this category yet.
             </article>
           ) : (
-            openProjects.map((project, index) => (
+            visibleProjects.map((project, index) => (
               <article key={project.id} className="overflow-hidden rounded-xl border border-[#d8cec5] bg-white shadow-sm">
                 <div
                   className={`h-48 ${
@@ -997,13 +1106,21 @@ export default function Page() {
                   <p className="mt-2 max-h-16 overflow-hidden text-sm text-[#4e4a47]">
                     {project.description}
                   </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveIntakeTab("project");
+                      document.getElementById("intake")?.scrollIntoView({ behavior: "smooth" });
+                    }}
+                    className="mt-4 inline-flex items-center rounded-md border border-[#0b2e59] px-3 py-1.5 text-xs font-semibold text-[#0b2e59] transition hover:bg-[#eaf2ff]"
+                  >
+                    View details
+                  </button>
                 </div>
               </article>
             ))
           )}
         </section>
-
-        <DonationPanel />
 
         <section id="intake" className="mt-10 rounded-2xl border border-[#d8cec5] bg-white p-5 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3">
