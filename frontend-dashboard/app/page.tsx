@@ -946,7 +946,7 @@ export default function Page() {
 
         <div className="mt-10 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-4xl font-black tracking-tight text-[#1f1c1d]">All projects</h2>
+            <h2 className="text-4xl font-black tracking-tight text-[#0b2e59]">All projects</h2>
             <p className="mt-1 text-lg text-[#4e4a47]">
               Showing {openProjects.length > 0 ? `1-${openProjects.length}` : "0"} opportunities
             </p>
@@ -978,10 +978,10 @@ export default function Page() {
                 <div
                   className={`h-48 ${
                     index % 3 === 0
-                      ? "bg-[radial-gradient(circle_at_top,_#d7ea62,_#f3c9de_45%,_#b44ec2)]"
+                      ? "bg-[radial-gradient(circle_at_top,_#19b65a,_#7fd6ff_45%,_#0b2e59)]"
                       : index % 3 === 1
-                        ? "bg-[linear-gradient(120deg,_#7fb26d,_#376f95)]"
-                        : "bg-[linear-gradient(120deg,_#f9cc59,_#f37e76)]"
+                        ? "bg-[linear-gradient(120deg,_#12a150,_#1f6fd1)]"
+                        : "bg-[linear-gradient(120deg,_#0b2e59,_#12a150)]"
                   }`}
                 />
                 <div className="p-4">
@@ -993,7 +993,7 @@ export default function Page() {
                       {project.status.replace("_", " ")}
                     </span>
                   </div>
-                  <h3 className="text-3xl font-black leading-tight text-[#1f1c1d]">{project.name}</h3>
+                  <h3 className="text-3xl font-black leading-tight text-[#0b2e59]">{project.name}</h3>
                   <p className="mt-2 max-h-16 overflow-hidden text-sm text-[#4e4a47]">
                     {project.description}
                   </p>
