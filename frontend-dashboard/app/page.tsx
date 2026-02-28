@@ -683,8 +683,8 @@ export default function Page() {
   ];
 
   return (
-    <main className="min-h-screen bg-[#efeee8] text-[#1f1c1d]">
-      <header className="border-b border-[#3d3738] bg-[#1f1c1d] text-[#f7f5ee]">
+    <main className="min-h-screen bg-white text-[#0b2e59]">
+      <header className="border-b border-[#0b2e59] bg-[#0b2e59] text-white">
         <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-4 px-6 py-5">
           <div className="text-4xl font-black tracking-tight">TurkNode</div>
           <div className="flex flex-wrap items-center gap-2">
@@ -755,7 +755,7 @@ export default function Page() {
                     void handleGoogleSignIn();
                   }}
                   disabled={isAuthActionPending}
-                  className="inline-flex items-center gap-2 rounded-full bg-[#0d7dd7] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#1b8ceb] disabled:cursor-not-allowed disabled:bg-slate-500"
+                  className="inline-flex items-center gap-2 rounded-full bg-[#12a150] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#0f8d46] disabled:cursor-not-allowed disabled:bg-slate-500"
                 >
                   {isAuthActionPending ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -768,7 +768,7 @@ export default function Page() {
                   type="button"
                   onClick={() => setShowEmailSignIn((prev) => !prev)}
                   disabled={isAuthActionPending}
-                  className="inline-flex items-center justify-center rounded-full border border-[#e5ded8] px-5 py-2 text-sm font-semibold text-[#f7f5ee] transition hover:bg-[#2a2728] disabled:cursor-not-allowed disabled:border-slate-500 disabled:text-slate-400"
+                  className="inline-flex items-center justify-center rounded-full border border-white px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#12407a] disabled:cursor-not-allowed disabled:border-slate-500 disabled:text-slate-400"
                 >
                   {showEmailSignIn ? "Hide Email Login" : "Use Email/Password"}
                 </button>
@@ -791,7 +791,7 @@ export default function Page() {
                   setEmailAuth((prev) => ({ ...prev, email: event.target.value }))
                 }
                 placeholder="Email"
-                className="w-full rounded-lg border border-[#5d5658] bg-[#2a2728] px-3 py-2 text-sm text-[#f7f5ee] focus:border-[#0d7dd7] focus:outline-none"
+                className="w-full rounded-lg border border-[#4f78ab] bg-[#12407a] px-3 py-2 text-sm text-white focus:border-[#12a150] focus:outline-none"
                 required
               />
               <input
@@ -801,13 +801,13 @@ export default function Page() {
                   setEmailAuth((prev) => ({ ...prev, password: event.target.value }))
                 }
                 placeholder="Password"
-                className="w-full rounded-lg border border-[#5d5658] bg-[#2a2728] px-3 py-2 text-sm text-[#f7f5ee] focus:border-[#0d7dd7] focus:outline-none"
+                className="w-full rounded-lg border border-[#4f78ab] bg-[#12407a] px-3 py-2 text-sm text-white focus:border-[#12a150] focus:outline-none"
                 required
               />
               <button
                 type="submit"
                 disabled={isAuthActionPending}
-                className="inline-flex items-center justify-center rounded-lg border border-[#f7f5ee] px-3 py-2 text-sm font-semibold text-[#f7f5ee] transition hover:bg-[#2a2728] disabled:cursor-not-allowed disabled:border-slate-500 disabled:text-slate-400"
+                className="inline-flex items-center justify-center rounded-lg border border-white px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#12407a] disabled:cursor-not-allowed disabled:border-slate-500 disabled:text-slate-400"
               >
                 {isAuthActionPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Sign In"}
               </button>
@@ -816,14 +816,14 @@ export default function Page() {
         ) : null}
       </header>
 
-      <div className="bg-[#b247a3] px-6 py-3 text-sm font-semibold text-white">
+      <div className="bg-[#12a150] px-6 py-3 text-sm font-semibold text-white">
         <div className="mx-auto w-full max-w-7xl">
           Sign in or register with TurkNode to unlock full volunteer opportunities.
         </div>
       </div>
 
-      <div className="border-b border-[#3d3738] bg-[#252123] px-6 py-3">
-        <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center gap-6 text-sm text-[#e7e1da]">
+      <div className="border-b border-[#0b2e59] bg-[#0b2e59] px-6 py-3">
+        <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center gap-6 text-sm text-[#dbe7f7]">
           {projectCategories.map((category, index) => (
             <button
               key={category}
@@ -838,9 +838,9 @@ export default function Page() {
         </div>
       </div>
 
-      <section className="relative overflow-hidden bg-[#252123] px-6 py-20 text-white">
-        <div className="pointer-events-none absolute left-[-120px] top-[-60px] h-72 w-72 rotate-12 rounded-[40%] bg-[#dfe36e]/90 blur-[1px]" />
-        <div className="pointer-events-none absolute left-40 top-[-90px] h-56 w-56 rotate-45 rounded-[15%] bg-[#d977cf]/80" />
+      <section className="relative overflow-hidden bg-[#0b2e59] px-6 py-20 text-white">
+        <div className="pointer-events-none absolute left-[-120px] top-[-60px] h-72 w-72 rotate-12 rounded-[40%] bg-[#12a150]/90 blur-[1px]" />
+        <div className="pointer-events-none absolute left-40 top-[-90px] h-56 w-56 rotate-45 rounded-[15%] bg-[#1f6fd1]/80" />
         <div className="mx-auto max-w-7xl">
           <h1 className="text-center text-4xl font-black tracking-tight md:text-6xl">
             Volunteer your skills anytime, anywhere
