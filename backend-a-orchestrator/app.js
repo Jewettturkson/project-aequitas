@@ -4,6 +4,8 @@ const volunteersRouter = require('./routes/volunteers');
 const projectsRouter = require('./routes/projects');
 const statusRouter = require('./routes/status');
 const statsRouter = require('./routes/stats');
+const readinessRouter = require('./routes/readiness');
+const matchFeedbackRouter = require('./routes/match-feedback');
 
 const app = express();
 app.set('trust proxy', 1);
@@ -69,10 +71,12 @@ app.get('/healthz', (req, res) => {
 });
 
 app.use('/api/v1/status', statusRouter);
+app.use('/api/v1/readiness', readinessRouter);
 app.use('/api/v1/stats', statsRouter);
 app.use('/api/v1/contributions', contributionsRouter);
 app.use('/api/v1/volunteers', volunteersRouter);
 app.use('/api/v1/projects', projectsRouter);
+app.use('/api/v1/match-feedback', matchFeedbackRouter);
 
 app.use((err, req, res, next) => {
   console.error('Unhandled application error', err);

@@ -134,6 +134,7 @@ const publicProjectSchema = withCoordinatePairValidation(
 
 const projectListSchema = z.object({
   limit: z.coerce.number().int().min(1).max(50).optional().default(10),
+  offset: z.coerce.number().int().min(0).max(5000).optional().default(0),
   scope: z.enum(['active', 'all']).optional().default('active'),
   status: z.enum(PROJECT_STATUSES).optional(),
 });
@@ -187,6 +188,8 @@ async function getProjectColumnCapabilities(dbClient) {
     hasStatus: columns.has('status'),
     hasGeoPoint: columns.has('geo_point'),
     hasContactEmail: columns.has('contact_email'),
+    hasStatusUpdatedAt: columns.has('status_updated_at'),
+    hasMatchRequestedAt: columns.has('match_requested_at'),
     geoPointRequired: nonNullable.has('geo_point'),
   };
 }
@@ -198,6 +201,8 @@ function mapProjectRow(row, capabilities) {
     description: row.description || '',
     status: row.status || 'OPEN',
     contactEmail: capabilities.hasContactEmail ? row.contact_email || '' : '',
+    statusUpdatedAt: capabilities.hasStatusUpdatedAt ? row.status_updated_at : null,
+    matchRequestedAt: capabilities.hasMatchRequestedAt ? row.match_requested_at : null,
     createdAt: row.created_at,
   };
 }
@@ -239,6 +244,12 @@ function selectProjectColumns(capabilities) {
   }
   if (capabilities.hasContactEmail) {
     columns.push('contact_email');
+  }
+  if (capabilities.hasStatusUpdatedAt) {
+    columns.push('status_updated_at');
+  }
+  if (capabilities.hasMatchRequestedAt) {
+    columns.push('match_requested_at');
   }
   return columns;
 }
@@ -329,7 +340,7 @@ router.get('/', async (req, res) => {
     });
   }
 
-  const { limit, scope, status } = parsed.data;
+  const { limit, offset, scope, status } = parsed.data;
   let dbClient;
 
   try {
@@ -354,8 +365,18 @@ router.get('/', async (req, res) => {
 
     params.push(limit);
     const limitSql = `$${nextParamIndex}`;
+    nextParamIndex += 1;
+    params.push(offset);
+    const offsetSql = `$${nextParamIndex}`;
     const whereSql =
       filterClauses.length > 0 ? `WHERE ${filterClauses.join(' AND ')}` : '';
+
+    const countSql = `
+      SELECT COUNT(*)::int AS total
+      FROM projects
+      ${whereSql}
+    `;
+    const countResult = await dbClient.query(countSql, params.slice(0, params.length - 2));
 
     const sql = `
       SELECT ${selectColumns.join(', ')}
@@ -363,6 +384,7 @@ router.get('/', async (req, res) => {
       ${whereSql}
       ORDER BY created_at DESC
       LIMIT ${limitSql}
+      OFFSET ${offsetSql}
     `;
 
     const result = await dbClient.query(sql, params);
@@ -372,6 +394,9 @@ router.get('/', async (req, res) => {
       meta: {
         returned: result.rowCount,
         scope,
+        limit,
+        offset,
+        total: Number(countResult.rows[0]?.total || 0),
       },
     });
   } catch (err) {
@@ -494,9 +519,13 @@ router.patch('/:projectId/status', requireFirebaseManager, async (req, res) => {
     }
 
     const returningColumns = selectProjectColumns(capabilities);
+    const setColumns = ['status = $1'];
+    if (capabilities.hasStatusUpdatedAt) {
+      setColumns.push('status_updated_at = CURRENT_TIMESTAMP');
+    }
     const sql = `
       UPDATE projects
-      SET status = $1
+      SET ${setColumns.join(', ')}
       WHERE id = $2
       RETURNING ${returningColumns.join(', ')}
     `;
@@ -647,6 +676,105 @@ router.post(
     }
   }
 );
+
+router.post('/:projectId/request-matches', requireFirebaseManager, async (req, res) => {
+  const parsedParams = projectIdParamsSchema.safeParse(req.params ?? {});
+  if (!parsedParams.success) {
+    return res.status(400).json({
+      success: false,
+      errorCode: 'VALIDATION_ERROR',
+      message: 'Invalid project identifier.',
+      details: parsedParams.error.flatten(),
+    });
+  }
+
+  let dbClient;
+  try {
+    dbClient = await pool.connect();
+    const capabilities = await getProjectColumnCapabilities(dbClient);
+    const projectResult = await dbClient.query(
+      `SELECT ${selectProjectColumns(capabilities).join(', ')} FROM projects WHERE id = $1`,
+      [parsedParams.data.projectId]
+    );
+
+    if (projectResult.rowCount === 0) {
+      return res.status(404).json({
+        success: false,
+        errorCode: 'PROJECT_NOT_FOUND',
+        message: 'Project not found.',
+      });
+    }
+
+    const project = mapProjectRow(projectResult.rows[0], capabilities);
+    if (!project.description || project.description.trim().length < 20) {
+      return res.status(400).json({
+        success: false,
+        errorCode: 'PROJECT_DESCRIPTION_REQUIRED',
+        message: 'Project description must be at least 20 characters for matching.',
+      });
+    }
+
+    const intelligenceBaseUrl = (process.env.INTELLIGENCE_URL || '').replace(/\/+$/, '');
+    if (!intelligenceBaseUrl) {
+      return res.status(503).json({
+        success: false,
+        errorCode: 'INTELLIGENCE_URL_MISSING',
+        message: 'Matching service URL is not configured.',
+      });
+    }
+
+    const headers = { 'Content-Type': 'application/json' };
+    if (process.env.INTELLIGENCE_SERVICE_TOKEN) {
+      headers['x-service-token'] = process.env.INTELLIGENCE_SERVICE_TOKEN;
+    }
+
+    const matchResponse = await fetch(`${intelligenceBaseUrl}/api/v1/match`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        projectDescription: project.description,
+        topK: 5,
+      }),
+    });
+
+    const payload = await matchResponse.json().catch(() => ({}));
+    if (!matchResponse.ok) {
+      return res.status(502).json({
+        success: false,
+        errorCode: 'MATCH_SERVICE_FAILED',
+        message:
+          payload?.error?.message ||
+          payload?.message ||
+          `Matching service returned ${matchResponse.status}.`,
+      });
+    }
+
+    if (capabilities.hasMatchRequestedAt) {
+      await dbClient.query(
+        `UPDATE projects SET match_requested_at = CURRENT_TIMESTAMP WHERE id = $1`,
+        [project.id]
+      );
+    }
+
+    return res.status(200).json({
+      success: true,
+      project,
+      data: Array.isArray(payload.data) ? payload.data : [],
+      meta: payload.meta || {},
+    });
+  } catch (err) {
+    console.error('Project match request failed', err);
+    return res.status(500).json({
+      success: false,
+      errorCode: 'PROJECT_MATCH_REQUEST_FAILED',
+      message: 'Unable to request project matches.',
+    });
+  } finally {
+    if (dbClient) {
+      dbClient.release();
+    }
+  }
+});
 
 router.get('/:projectId/applications', requireFirebaseManager, async (req, res) => {
   const parsedParams = projectIdParamsSchema.safeParse(req.params ?? {});

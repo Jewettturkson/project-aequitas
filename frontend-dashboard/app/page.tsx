@@ -206,6 +206,12 @@ export default function Page() {
   const [typeFilter, setTypeFilter] = useState("");
   const [searchFilter, setSearchFilter] = useState("");
   const [projectSort, setProjectSort] = useState("recommended");
+  const [projectPage, setProjectPage] = useState(1);
+  const [isRequestingMatchesProjectId, setIsRequestingMatchesProjectId] = useState<
+    string | null
+  >(null);
+  const [currentMatchProjectId, setCurrentMatchProjectId] = useState<string | null>(null);
+  const [feedbackBusyVolunteerId, setFeedbackBusyVolunteerId] = useState<string | null>(null);
 
   const showToast = (tone: ToastState["tone"], message: string) => {
     setToast({ tone, message });
@@ -775,6 +781,101 @@ export default function Page() {
     setTypeFilter("");
     setSearchFilter("");
     setProjectSort("recommended");
+    setProjectPage(1);
+  };
+
+  useEffect(() => {
+    setProjectPage(1);
+  }, [activeProjectCategory, causeFilter, skillsFilter, typeFilter, searchFilter, projectSort]);
+
+  const PAGE_SIZE = 6;
+  const totalProjectPages = Math.max(1, Math.ceil(visibleProjects.length / PAGE_SIZE));
+  const safeProjectPage = Math.min(projectPage, totalProjectPages);
+  const paginatedProjects = useMemo(() => {
+    const start = (safeProjectPage - 1) * PAGE_SIZE;
+    return visibleProjects.slice(start, start + PAGE_SIZE);
+  }, [safeProjectPage, visibleProjects]);
+
+  const requestMatchesForProject = async (project: ProjectPreview) => {
+    if (!sessionUser?.hasManagerAccess) {
+      showToast("error", "Manager sign-in is required to request project matches.");
+      return;
+    }
+
+    setIsRequestingMatchesProjectId(project.id);
+    setError("");
+    try {
+      const { auth } = await import("../lib/firebase");
+      const idToken = await auth.currentUser?.getIdToken();
+      if (!idToken) {
+        showToast("error", "Please sign in again to request matches.");
+        return;
+      }
+
+      const response = await fetch(
+        `${ORCHESTRATOR_URL}/api/v1/projects/${project.id}/request-matches`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${idToken}`,
+          },
+        }
+      );
+      const payload = (await response.json().catch(() => ({}))) as {
+        data?: MatchVolunteer[];
+        message?: string;
+      };
+
+      if (!response.ok) {
+        const message = payload.message || "Unable to request project matches.";
+        setError(message);
+        showToast("error", message);
+        return;
+      }
+
+      setResults(payload.data || []);
+      setCurrentMatchProjectId(project.id);
+      showToast("success", "Matches requested successfully.");
+      document.getElementById("ai-matcher")?.scrollIntoView({ behavior: "smooth" });
+    } catch {
+      setError("Could not request project matches.");
+      showToast("error", "Could not request project matches.");
+    } finally {
+      setIsRequestingMatchesProjectId(null);
+    }
+  };
+
+  const sendMatchFeedback = async (
+    volunteerId: string,
+    sentiment: "up" | "down",
+    score: number
+  ) => {
+    setFeedbackBusyVolunteerId(volunteerId);
+    try {
+      const response = await fetch(`${ORCHESTRATOR_URL}/api/v1/match-feedback`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projectId: currentMatchProjectId || undefined,
+          volunteerId,
+          sentiment,
+          score,
+          reasonTag: sentiment === "up" ? "strong_fit" : "skills_mismatch",
+        }),
+      });
+
+      if (!response.ok) {
+        showToast("error", "Unable to save match feedback.");
+        return;
+      }
+
+      showToast("success", sentiment === "up" ? "Positive feedback saved." : "Feedback saved.");
+    } catch {
+      showToast("error", "Unable to save match feedback.");
+    } finally {
+      setFeedbackBusyVolunteerId(null);
+    }
   };
 
   return (
@@ -1053,7 +1154,14 @@ export default function Page() {
           <div>
             <h2 className="text-4xl font-black tracking-tight text-[#0b2e59]">All projects</h2>
             <p className="mt-1 text-lg text-[#4e4a47]">
-              Showing {visibleProjects.length > 0 ? `1-${visibleProjects.length}` : "0"} opportunities
+              Showing{" "}
+              {visibleProjects.length > 0
+                ? `${(safeProjectPage - 1) * PAGE_SIZE + 1}-${Math.min(
+                    safeProjectPage * PAGE_SIZE,
+                    visibleProjects.length
+                  )}`
+                : "0"}{" "}
+              of {visibleProjects.length} opportunities
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -1082,7 +1190,7 @@ export default function Page() {
               No projects match this category yet.
             </article>
           ) : (
-            visibleProjects.map((project, index) => (
+            paginatedProjects.map((project, index) => (
               <article key={project.id} className="overflow-hidden rounded-xl border border-[#d8cec5] bg-white shadow-sm">
                 <div
                   className={`h-48 ${
@@ -1116,11 +1224,46 @@ export default function Page() {
                   >
                     View details
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void requestMatchesForProject(project);
+                    }}
+                    disabled={isRequestingMatchesProjectId === project.id}
+                    className="ml-2 mt-4 inline-flex items-center rounded-md border border-[#12a150] px-3 py-1.5 text-xs font-semibold text-[#0f8d46] transition hover:bg-[#ecf9f1] disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {isRequestingMatchesProjectId === project.id ? "Requesting..." : "Request matches"}
+                  </button>
                 </div>
               </article>
             ))
           )}
         </section>
+        {visibleProjects.length > PAGE_SIZE ? (
+          <div className="mt-4 flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setProjectPage((prev) => Math.max(1, prev - 1))}
+              disabled={safeProjectPage === 1}
+              className="rounded-md border border-[#cfc6be] bg-white px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Prev
+            </button>
+            <span className="text-sm text-[#4e4a47]">
+              Page {safeProjectPage} of {totalProjectPages}
+            </span>
+            <button
+              type="button"
+              onClick={() =>
+                setProjectPage((prev) => Math.min(totalProjectPages, prev + 1))
+              }
+              disabled={safeProjectPage >= totalProjectPages}
+              className="rounded-md border border-[#cfc6be] bg-white px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Next
+            </button>
+          </div>
+        ) : null}
 
         <section id="intake" className="mt-10 rounded-2xl border border-[#d8cec5] bg-white p-5 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1419,7 +1562,7 @@ export default function Page() {
           />
         </section>
 
-        <section className="mt-10">
+        <section id="ai-matcher" className="mt-10">
           <h2 className="text-center text-xl font-semibold text-[#223d7a]">AI Matcher</h2>
 
           <form
@@ -1496,12 +1639,34 @@ export default function Page() {
                     <p className="text-sm font-semibold text-emerald-700">
                       Match Score: {scorePct}%
                     </p>
-                    <a
-                      href={`mailto:${volunteer.email}?subject=TurkNode Project Match Opportunity`}
-                      className="inline-flex items-center justify-center rounded-md border border-blue-200 px-2.5 py-1 text-xs font-semibold text-blue-900 transition hover:bg-blue-50"
-                    >
-                      Invite
-                    </a>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        disabled={feedbackBusyVolunteerId === volunteer.volunteer_id}
+                        onClick={() =>
+                          void sendMatchFeedback(volunteer.volunteer_id, "up", score)
+                        }
+                        className="inline-flex items-center justify-center rounded-md border border-emerald-300 px-2.5 py-1 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50 disabled:opacity-50"
+                      >
+                        Helpful
+                      </button>
+                      <button
+                        type="button"
+                        disabled={feedbackBusyVolunteerId === volunteer.volunteer_id}
+                        onClick={() =>
+                          void sendMatchFeedback(volunteer.volunteer_id, "down", score)
+                        }
+                        className="inline-flex items-center justify-center rounded-md border border-red-300 px-2.5 py-1 text-xs font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-50"
+                      >
+                        Not fit
+                      </button>
+                      <a
+                        href={`mailto:${volunteer.email}?subject=TurkNode Project Match Opportunity`}
+                        className="inline-flex items-center justify-center rounded-md border border-blue-200 px-2.5 py-1 text-xs font-semibold text-blue-900 transition hover:bg-blue-50"
+                      >
+                        Invite
+                      </a>
+                    </div>
                   </div>
                 </article>
               );
