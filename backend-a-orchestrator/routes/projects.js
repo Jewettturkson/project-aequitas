@@ -221,17 +221,34 @@ function mapProjectApplicationRow(row) {
   };
 }
 
-async function hasProjectApplicationsTable(dbClient) {
-  const sql = `
-    SELECT EXISTS (
-      SELECT 1
-      FROM information_schema.tables
-      WHERE table_schema = current_schema()
-        AND table_name = 'project_applications'
-    ) AS present
+async function ensureProjectApplicationsTable(dbClient) {
+  const createTableSql = `
+    CREATE TABLE IF NOT EXISTS project_applications (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+      volunteer_name TEXT NOT NULL,
+      volunteer_email TEXT NOT NULL,
+      message TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'PENDING',
+      decision_note TEXT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      reviewed_at TIMESTAMPTZ NULL
+    )
   `;
-  const result = await dbClient.query(sql);
-  return result.rows[0]?.present === true;
+
+  const createProjectIndexSql = `
+    CREATE INDEX IF NOT EXISTS idx_project_applications_project_id
+    ON project_applications(project_id)
+  `;
+
+  const createStatusIndexSql = `
+    CREATE INDEX IF NOT EXISTS idx_project_applications_status
+    ON project_applications(status)
+  `;
+
+  await dbClient.query(createTableSql);
+  await dbClient.query(createProjectIndexSql);
+  await dbClient.query(createStatusIndexSql);
 }
 
 function selectProjectColumns(capabilities) {
@@ -583,15 +600,7 @@ router.post(
 
     try {
       dbClient = await pool.connect();
-      const applicationsTableReady = await hasProjectApplicationsTable(dbClient);
-      if (!applicationsTableReady) {
-        return res.status(503).json({
-          success: false,
-          errorCode: 'PROJECT_APPLICATIONS_UNAVAILABLE',
-          message:
-            'Project applications table is not available. Run the latest database migration.',
-        });
-      }
+      await ensureProjectApplicationsTable(dbClient);
 
       const capabilities = await getProjectColumnCapabilities(dbClient);
       const projectSelect = ['id', 'name', 'status'];
@@ -796,15 +805,7 @@ router.get('/:projectId/applications', requireFirebaseManager, async (req, res) 
 
   try {
     dbClient = await pool.connect();
-    const applicationsTableReady = await hasProjectApplicationsTable(dbClient);
-    if (!applicationsTableReady) {
-      return res.status(503).json({
-        success: false,
-        errorCode: 'PROJECT_APPLICATIONS_UNAVAILABLE',
-        message:
-          'Project applications table is not available. Run the latest database migration.',
-      });
-    }
+    await ensureProjectApplicationsTable(dbClient);
 
     const projectResult = await dbClient.query(
       `SELECT id, name FROM projects WHERE id = $1`,
@@ -893,15 +894,7 @@ router.patch(
 
     try {
       dbClient = await pool.connect();
-      const applicationsTableReady = await hasProjectApplicationsTable(dbClient);
-      if (!applicationsTableReady) {
-        return res.status(503).json({
-          success: false,
-          errorCode: 'PROJECT_APPLICATIONS_UNAVAILABLE',
-          message:
-            'Project applications table is not available. Run the latest database migration.',
-        });
-      }
+      await ensureProjectApplicationsTable(dbClient);
 
       const sql = `
         UPDATE project_applications
