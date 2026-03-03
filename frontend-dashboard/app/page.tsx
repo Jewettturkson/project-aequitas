@@ -84,6 +84,8 @@ type EmailAuthState = {
   password: string;
 };
 
+type DashboardView = "volunteer" | "manager";
+
 const ORCHESTRATOR_URL =
   process.env.NEXT_PUBLIC_ORCHESTRATOR_URL || "http://localhost:3000";
 const INTELLIGENCE_URL =
@@ -212,6 +214,7 @@ export default function Page() {
   >(null);
   const [currentMatchProjectId, setCurrentMatchProjectId] = useState<string | null>(null);
   const [feedbackBusyVolunteerId, setFeedbackBusyVolunteerId] = useState<string | null>(null);
+  const [dashboardView, setDashboardView] = useState<DashboardView>("volunteer");
 
   const showToast = (tone: ToastState["tone"], message: string) => {
     setToast({ tone, message });
@@ -409,6 +412,23 @@ export default function Page() {
     return () => clearTimeout(timer);
   }, [toast]);
 
+  useEffect(() => {
+    if (sessionUser?.hasManagerAccess) {
+      setDashboardView("manager");
+      setActiveIntakeTab("project");
+      setProjectForm((prev) => ({
+        ...prev,
+        contactEmail:
+          prev.contactEmail.trim().length > 0
+            ? prev.contactEmail
+            : (sessionUser.email || "").trim(),
+      }));
+      return;
+    }
+
+    setDashboardView("volunteer");
+  }, [sessionUser]);
+
   const handleGoogleSignIn = async () => {
     setIsAuthActionPending(true);
     try {
@@ -587,6 +607,10 @@ export default function Page() {
     try {
       const normalizedLatitude = projectForm.latitude.trim();
       const normalizedLongitude = projectForm.longitude.trim();
+      const derivedContactEmail =
+        projectForm.contactEmail.trim() ||
+        (sessionUser?.hasManagerAccess ? sessionUser.email.trim() : "") ||
+        undefined;
 
       const adminKey = projectForm.adminKey.trim();
       const isAdminSubmission = adminKey.length > 0;
@@ -607,7 +631,7 @@ export default function Page() {
         body: JSON.stringify({
           name: projectForm.name,
           description: projectForm.description,
-          contactEmail: projectForm.contactEmail.trim() || undefined,
+          contactEmail: derivedContactEmail,
           latitude: normalizedLatitude.length > 0 ? Number(normalizedLatitude) : undefined,
           longitude: normalizedLongitude.length > 0 ? Number(normalizedLongitude) : undefined,
           status: "OPEN",
@@ -632,7 +656,7 @@ export default function Page() {
       setProjectForm({
         name: "",
         description: "",
-        contactEmail: "",
+        contactEmail: sessionUser?.hasManagerAccess ? sessionUser.email : "",
         latitude: "",
         longitude: "",
         adminKey: "",
@@ -1119,6 +1143,44 @@ export default function Page() {
       </section>
 
       <section className="mx-auto w-full max-w-7xl px-6 py-8">
+        <section className="mb-6 rounded-xl border border-[#d8cec5] bg-[#f7f8fc] p-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-[#0b2e59]">Workspace</p>
+              <p className="text-xs text-[#4e4a47]">
+                {dashboardView === "manager"
+                  ? "Manager dashboard: publish projects, receive applications, and request matches."
+                  : "Volunteer dashboard: discover projects, onboard, and apply quickly."}
+              </p>
+            </div>
+            <div className="inline-flex rounded-lg border border-[#b7c7df] bg-white p-1">
+              <button
+                type="button"
+                onClick={() => setDashboardView("volunteer")}
+                className={`rounded-md px-3 py-1.5 text-sm font-semibold transition ${
+                  dashboardView === "volunteer"
+                    ? "bg-[#0b2e59] text-white"
+                    : "text-[#0b2e59] hover:bg-[#eef4ff]"
+                }`}
+              >
+                Volunteer View
+              </button>
+              <button
+                type="button"
+                onClick={() => setDashboardView("manager")}
+                disabled={!sessionUser?.hasManagerAccess}
+                className={`rounded-md px-3 py-1.5 text-sm font-semibold transition ${
+                  dashboardView === "manager"
+                    ? "bg-[#12a150] text-white"
+                    : "text-[#0f8d46] hover:bg-[#ecf9f1]"
+                } disabled:cursor-not-allowed disabled:opacity-50`}
+              >
+                Manager View
+              </button>
+            </div>
+          </div>
+        </section>
+
         <div className="mb-6 grid gap-4 md:grid-cols-3">
           <div className="rounded-xl border border-[#d8cec5] bg-white p-5 shadow-sm">
             <div className="mb-2 flex items-center gap-2 text-[#223d7a]">
@@ -1267,34 +1329,42 @@ export default function Page() {
 
         <section id="intake" className="mt-10 rounded-2xl border border-[#d8cec5] bg-white p-5 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-lg font-semibold text-[#223d7a]">Intake Workspace</h2>
-            <div className="inline-flex rounded-lg border border-blue-200 bg-slate-50 p-1">
-              <button
-                type="button"
-                onClick={() => setActiveIntakeTab("volunteer")}
-                className={`rounded-md px-3 py-1.5 text-sm font-semibold transition ${
-                  activeIntakeTab === "volunteer"
-                    ? "bg-blue-900 text-white"
-                    : "text-blue-900 hover:bg-blue-50"
-                }`}
-              >
-                Volunteer Intake
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveIntakeTab("project")}
-                className={`rounded-md px-3 py-1.5 text-sm font-semibold transition ${
-                  activeIntakeTab === "project"
-                    ? "bg-blue-900 text-white"
-                    : "text-blue-900 hover:bg-blue-50"
-                }`}
-              >
-                Project Intake
-              </button>
-            </div>
+            <h2 className="text-lg font-semibold text-[#223d7a]">
+              {dashboardView === "manager" ? "Manager Project Desk" : "Intake Workspace"}
+            </h2>
+            {dashboardView === "volunteer" ? (
+              <div className="inline-flex rounded-lg border border-blue-200 bg-slate-50 p-1">
+                <button
+                  type="button"
+                  onClick={() => setActiveIntakeTab("volunteer")}
+                  className={`rounded-md px-3 py-1.5 text-sm font-semibold transition ${
+                    activeIntakeTab === "volunteer"
+                      ? "bg-blue-900 text-white"
+                      : "text-blue-900 hover:bg-blue-50"
+                  }`}
+                >
+                  Volunteer Intake
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveIntakeTab("project")}
+                  className={`rounded-md px-3 py-1.5 text-sm font-semibold transition ${
+                    activeIntakeTab === "project"
+                      ? "bg-blue-900 text-white"
+                      : "text-blue-900 hover:bg-blue-50"
+                  }`}
+                >
+                  Project Intake
+                </button>
+              </div>
+            ) : (
+              <div className="rounded-full border border-[#12a150] bg-[#ecf9f1] px-3 py-1 text-xs font-semibold text-[#0f8d46]">
+                Applications route to your project contact email
+              </div>
+            )}
           </div>
 
-          {activeIntakeTab === "volunteer" ? (
+          {dashboardView === "volunteer" && activeIntakeTab === "volunteer" ? (
             <article className="mt-5 rounded-xl border border-blue-200 bg-white p-4">
               <div className="mb-4 flex items-center gap-2 text-blue-900">
                 <UserPlus className="h-5 w-5" />
@@ -1390,10 +1460,14 @@ export default function Page() {
             <article className="mt-5 rounded-xl border border-blue-200 bg-white p-4">
               <div className="mb-4 flex items-center gap-2 text-blue-900">
                 <MapPinned className="h-5 w-5" />
-                <h3 className="text-lg font-semibold">Post A Project</h3>
+                <h3 className="text-lg font-semibold">
+                  {dashboardView === "manager" ? "Publish Project As Manager" : "Post A Project"}
+                </h3>
               </div>
               <p className="mb-4 text-sm text-slate-600">
-                Public project posting is enabled. Coordinates are optional; use an admin key only for protected admin submissions.
+                {dashboardView === "manager"
+                  ? "Manager workflow: publish projects, then review applications and contact volunteers."
+                  : "Public project posting is enabled. Coordinates are optional; use an admin key only for protected admin submissions."}
               </p>
 
               <form onSubmit={handleProjectSubmit} className="space-y-3">
@@ -1449,6 +1523,11 @@ export default function Page() {
                         : "border-blue-200 focus:border-blue-900"
                     }`}
                   />
+                  {dashboardView === "manager" ? (
+                    <p className="mt-1 text-xs text-slate-500">
+                      Leave blank to auto-use your signed-in manager email.
+                    </p>
+                  ) : null}
                   {projectErrors.contactEmail ? (
                     <p className="mt-1 text-xs text-red-600">{projectErrors.contactEmail}</p>
                   ) : null}
@@ -1522,8 +1601,9 @@ export default function Page() {
           )}
         </section>
 
-        <section className="mt-8 grid gap-4 lg:grid-cols-2">
-          <article className="rounded-xl border border-blue-200 bg-white p-5">
+        <section className={`mt-8 grid gap-4 ${dashboardView === "manager" ? "lg:grid-cols-1" : "lg:grid-cols-2"}`}>
+          {dashboardView === "volunteer" ? (
+            <article className="rounded-xl border border-blue-200 bg-white p-5">
             <h3 className="text-base font-semibold text-blue-900">Recently Onboarded Volunteers</h3>
             <div className="mt-3 space-y-3">
               {isDirectoryLoading ? (
@@ -1547,7 +1627,8 @@ export default function Page() {
                 ))
               )}
             </div>
-          </article>
+            </article>
+          ) : null}
 
           <OpenProjectIntakePanel
             projects={openProjects}
