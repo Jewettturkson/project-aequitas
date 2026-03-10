@@ -16,13 +16,12 @@ const missingKeys = Object.entries(firebaseConfig)
   .filter(([, value]) => !value)
   .map(([key]) => key);
 
-if (missingKeys.length > 0) {
-  throw new Error(
-    `Missing Firebase environment variables: ${missingKeys.join(', ')}`
-  );
-}
+const firebaseReady = missingKeys.length === 0;
+const app = firebaseReady
+  ? getApps().length > 0
+    ? getApp()
+    : initializeApp(firebaseConfig)
+  : null;
+const auth = app ? getAuth(app) : null;
 
-const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
-const auth = getAuth(app);
-
-export { app, auth };
+export { app, auth, firebaseReady, missingKeys };

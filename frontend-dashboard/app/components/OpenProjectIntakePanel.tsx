@@ -170,7 +170,7 @@ export default function OpenProjectIntakePanel({
 
     try {
       const { auth } = await import("../../lib/firebase");
-      const currentUser = auth.currentUser;
+      const currentUser = auth?.currentUser;
       if (!currentUser) {
         return null;
       }

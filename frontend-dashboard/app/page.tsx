@@ -350,6 +350,12 @@ export default function Page() {
           import("firebase/auth"),
         ]);
 
+        if (!auth) {
+          setSessionUser(null);
+          setAuthStatus("unavailable");
+          return;
+        }
+
         unsubscribe = onAuthStateChanged(auth, async (nextUser) => {
           if (isCancelled) {
             return;
@@ -455,6 +461,11 @@ export default function Page() {
         import("firebase/auth"),
       ]);
 
+      if (!auth) {
+        showToast("error", "Authentication is unavailable in this environment.");
+        return;
+      }
+
       await signInWithPopup(auth, new GoogleAuthProvider());
       showToast("success", "Signed in with Google.");
       setShowEmailSignIn(false);
@@ -483,6 +494,11 @@ export default function Page() {
         import("firebase/auth"),
       ]);
 
+      if (!auth) {
+        showToast("error", "Authentication is unavailable in this environment.");
+        return;
+      }
+
       await signInWithEmailAndPassword(auth, normalizedEmail, password);
       showToast("success", "Signed in with email.");
       setEmailAuth({ email: normalizedEmail, password: "" });
@@ -502,6 +518,11 @@ export default function Page() {
         import("firebase/auth"),
       ]);
 
+      if (!auth) {
+        showToast("error", "Authentication is unavailable in this environment.");
+        return;
+      }
+
       await signOut(auth);
       showToast("success", "Signed out.");
     } catch (error) {
@@ -515,7 +536,11 @@ export default function Page() {
     setIsAuthActionPending(true);
     try {
       const { auth } = await import("../lib/firebase");
-      const currentUser = auth.currentUser;
+      if (!auth) {
+        showToast("error", "Authentication is unavailable in this environment.");
+        return;
+      }
+      const currentUser = auth?.currentUser;
       if (!currentUser) {
         showToast("error", "Sign in first to refresh claims.");
         return;
@@ -848,7 +873,7 @@ export default function Page() {
     setError("");
     try {
       const { auth } = await import("../lib/firebase");
-      const idToken = await auth.currentUser?.getIdToken();
+      const idToken = await auth?.currentUser?.getIdToken();
       if (!idToken) {
         showToast("error", "Please sign in again to request matches.");
         return;
