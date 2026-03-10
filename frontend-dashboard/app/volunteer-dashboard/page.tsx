@@ -13,7 +13,6 @@ import TabNav from "./components/TabNav";
 import VolunteerProfileCard from "./components/VolunteerProfileCard";
 import {
   activeProjects as fallbackActiveProjects,
-  badges,
   completedProjects as fallbackCompletedProjects,
   recommendations,
   sidebarNav,
@@ -22,6 +21,7 @@ import {
 } from "./mockData";
 import type {
   ActiveProject,
+  Badge,
   CompletedProject,
   DashboardTab,
   Stat,
@@ -58,6 +58,67 @@ type StatsApi = {
   totalImpact: number;
   activeProjects: number;
 };
+
+function buildDynamicBadges({
+  completedCount,
+  activeCount,
+  estimatedHours,
+  totalImpact,
+}: {
+  completedCount: number;
+  activeCount: number;
+  estimatedHours: number;
+  totalImpact: number;
+}): Badge[] {
+  const badgeList: Badge[] = [];
+
+  if (estimatedHours >= 100) {
+    badgeList.push({
+      id: "hours-100",
+      name: "100 Hours Badge",
+      description: "Crossed 100+ estimated volunteer service hours.",
+      earnedOn: "Recently earned",
+    });
+  }
+
+  if (completedCount >= 5) {
+    badgeList.push({
+      id: "community-builder",
+      name: "Community Builder",
+      description: "Completed 5+ community projects.",
+      earnedOn: "Recently earned",
+    });
+  }
+
+  if (activeCount >= 2) {
+    badgeList.push({
+      id: "active-collaborator",
+      name: "Active Collaborator",
+      description: "Contributing across multiple active initiatives.",
+      earnedOn: "In progress",
+    });
+  }
+
+  if (totalImpact >= 1) {
+    badgeList.push({
+      id: "impact-supporter",
+      name: "Impact Supporter",
+      description: "Part of a network delivering measurable impact outcomes.",
+      earnedOn: "Platform milestone",
+    });
+  }
+
+  if (badgeList.length === 0) {
+    badgeList.push({
+      id: "first-step",
+      name: "First Step",
+      description: "Complete your first contribution to unlock new badges.",
+      earnedOn: "Available",
+    });
+  }
+
+  return badgeList;
+}
 
 function mapApiProjectToCompleted(project: ProjectApiRow): CompletedProject {
   const createdAt = project.createdAt ? new Date(project.createdAt) : new Date();
@@ -103,6 +164,7 @@ export default function VolunteerDashboardPage() {
   const [activeProjects, setActiveProjects] =
     useState<ActiveProject[]>(fallbackActiveProjects);
   const [stats, setStats] = useState<Stat[]>(fallbackStats);
+  const [badgeItems, setBadgeItems] = useState<Badge[]>([]);
   const [isDataLoading, setIsDataLoading] = useState(true);
   const [dataError, setDataError] = useState<string>("");
 
@@ -202,6 +264,7 @@ export default function VolunteerDashboardPage() {
         }
 
         let completedCount = fallbackVolunteer.completedProjects;
+        let activeCount = fallbackVolunteer.currentlyActiveProjects;
         if (completedRes.ok) {
           const completedPayload = (await completedRes.json()) as {
             data?: ProjectApiRow[];
@@ -213,14 +276,27 @@ export default function VolunteerDashboardPage() {
           }
         }
 
+        if (activeRes.ok) {
+          const activePayload = (await activeRes.json()) as {
+            data?: ProjectApiRow[];
+          };
+          const activeRows = activePayload.data || [];
+          activeCount = activeRows.length;
+          if (activeRows.length > 0) {
+            setActiveProjects(activeRows.map(mapApiProjectToActive));
+          }
+        }
+
         if (statsRes.ok) {
           const statsPayload = (await statsRes.json()) as StatsApi;
+          const estimatedHours = completedCount * 14 + activeCount * 6;
+
           setStats([
             {
               id: "s1",
               label: "Total Hours Served",
-              value: `${fallbackVolunteer.hoursVolunteered}h`,
-              hint: "Volunteer portfolio",
+              value: `${estimatedHours}h`,
+              hint: "Estimated from project activity",
             },
             {
               id: "s2",
@@ -237,10 +313,26 @@ export default function VolunteerDashboardPage() {
             {
               id: "s4",
               label: "Badges Earned",
-              value: String(fallbackVolunteer.badgesEarned),
+              value: String(
+                buildDynamicBadges({
+                  completedCount,
+                  activeCount,
+                  estimatedHours,
+                  totalImpact: statsPayload.totalImpact,
+                }).length
+              ),
               hint: `Network impact: ${statsPayload.totalImpact.toFixed(1)}`,
             },
           ]);
+
+          setBadgeItems(
+            buildDynamicBadges({
+              completedCount,
+              activeCount,
+              estimatedHours,
+              totalImpact: statsPayload.totalImpact,
+            })
+          );
         }
 
         if (volunteersRes.ok) {
@@ -262,8 +354,8 @@ export default function VolunteerDashboardPage() {
             location: prev.location,
             completedProjects: prev.completedProjects,
             availability:
-              activeProjects.length > 0
-                ? `Currently active on ${activeProjects.length} projects`
+              activeCount > 0
+                ? `Currently active on ${activeCount} projects`
                 : "Available for new projects",
           }));
         } else {
@@ -273,25 +365,24 @@ export default function VolunteerDashboardPage() {
           }));
         }
 
-        if (activeRes.ok) {
-          const activePayload = (await activeRes.json()) as {
-            data?: ProjectApiRow[];
-          };
-          const activeRows = activePayload.data || [];
-          if (activeRows.length > 0) {
-            setActiveProjects(activeRows.map(mapApiProjectToActive));
-            setVolunteerData((prev) => ({
-              ...prev,
-              availability: `Currently active on ${activeRows.length} projects`,
-              currentlyActiveProjects: activeRows.length,
-            }));
-          } else {
-            setVolunteerData((prev) => ({
-              ...prev,
-              availability: "Available for new projects",
-              currentlyActiveProjects: 0,
-            }));
-          }
+        setVolunteerData((prev) => ({
+          ...prev,
+          availability:
+            activeCount > 0
+              ? `Currently active on ${activeCount} projects`
+              : "Available for new projects",
+          currentlyActiveProjects: activeCount,
+        }));
+
+        if (!statsRes.ok) {
+          setBadgeItems(
+            buildDynamicBadges({
+              completedCount,
+              activeCount,
+              estimatedHours: completedCount * 14 + activeCount * 6,
+              totalImpact: 0,
+            })
+          );
         }
       } catch {
         if (!isCancelled) {
@@ -431,7 +522,7 @@ export default function VolunteerDashboardPage() {
                 <section className="mb-8">
                   <h2 className="mb-4 text-2xl font-black tracking-tight">Achievements & Badges</h2>
                   <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                    {badges.map((badge) => (
+                    {badgeItems.map((badge) => (
                       <BadgeCard key={badge.id} badge={badge} />
                     ))}
                   </div>
