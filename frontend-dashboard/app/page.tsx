@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Briefcase,
   Database,
@@ -154,6 +155,7 @@ function getClientErrorMessage(error: unknown, fallback: string) {
 }
 
 export default function Page() {
+  const router = useRouter();
   const [status, setStatus] = useState<"loading" | "connected" | "disconnected">(
     "loading"
   );
@@ -215,6 +217,7 @@ export default function Page() {
   const [currentMatchProjectId, setCurrentMatchProjectId] = useState<string | null>(null);
   const [feedbackBusyVolunteerId, setFeedbackBusyVolunteerId] = useState<string | null>(null);
   const [dashboardView, setDashboardView] = useState<DashboardView>("volunteer");
+  const [isRoutingVolunteer, setIsRoutingVolunteer] = useState(false);
 
   const showToast = (tone: ToastState["tone"], message: string) => {
     setToast({ tone, message });
@@ -414,6 +417,7 @@ export default function Page() {
 
   useEffect(() => {
     if (sessionUser?.hasManagerAccess) {
+      setIsRoutingVolunteer(false);
       setDashboardView("manager");
       setActiveIntakeTab("project");
       setProjectForm((prev) => ({
@@ -428,6 +432,20 @@ export default function Page() {
 
     setDashboardView("volunteer");
   }, [sessionUser]);
+
+  useEffect(() => {
+    if (authStatus !== "ready") {
+      return;
+    }
+
+    if (sessionUser && !sessionUser.hasManagerAccess) {
+      setIsRoutingVolunteer(true);
+      router.replace("/volunteer-dashboard");
+      return;
+    }
+
+    setIsRoutingVolunteer(false);
+  }, [authStatus, router, sessionUser]);
 
   const handleGoogleSignIn = async () => {
     setIsAuthActionPending(true);
@@ -908,6 +926,17 @@ export default function Page() {
         <div className="inline-flex items-center gap-2 rounded-full border border-[#d7dbe1] bg-white px-4 py-2 text-sm font-semibold">
           <Loader2 className="h-4 w-4 animate-spin" />
           Checking session...
+        </div>
+      </main>
+    );
+  }
+
+  if (isRoutingVolunteer) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#f3f4f6] text-[#13161a]">
+        <div className="inline-flex items-center gap-2 rounded-full border border-[#d7dbe1] bg-white px-4 py-2 text-sm font-semibold">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Opening volunteer dashboard...
         </div>
       </main>
     );
