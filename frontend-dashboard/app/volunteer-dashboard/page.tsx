@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Calendar, Contact, FolderKanban, Sparkles } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Calendar, Contact, FolderKanban, Loader2, Sparkles } from "lucide-react";
 import BadgeCard from "./components/BadgeCard";
 import FloatingActions from "./components/FloatingActions";
 import HeroSection from "./components/HeroSection";
@@ -11,20 +12,99 @@ import StatsCard from "./components/StatsCard";
 import TabNav from "./components/TabNav";
 import VolunteerProfileCard from "./components/VolunteerProfileCard";
 import {
-  activeProjects,
+  activeProjects as fallbackActiveProjects,
   badges,
-  completedProjects,
+  completedProjects as fallbackCompletedProjects,
   recommendations,
   sidebarNav,
-  stats,
-  volunteer,
+  stats as fallbackStats,
+  volunteer as fallbackVolunteer,
 } from "./mockData";
-import type { DashboardTab } from "./types";
+import type {
+  ActiveProject,
+  CompletedProject,
+  DashboardTab,
+  Stat,
+  Volunteer,
+} from "./types";
+
+const ORCHESTRATOR_URL =
+  process.env.NEXT_PUBLIC_ORCHESTRATOR_URL || "http://localhost:3000";
+
+type SessionUser = {
+  uid: string;
+  email: string;
+  displayName: string;
+};
+
+type VolunteerApiRow = {
+  id: string;
+  fullName: string;
+  email: string;
+  skillSummary: string;
+};
+
+type ProjectApiRow = {
+  id: string;
+  name: string;
+  description: string;
+  status: "OPEN" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
+  contactEmail?: string;
+  createdAt?: string;
+};
+
+type StatsApi = {
+  volunteers: number;
+  totalImpact: number;
+  activeProjects: number;
+};
+
+function mapApiProjectToCompleted(project: ProjectApiRow): CompletedProject {
+  const createdAt = project.createdAt ? new Date(project.createdAt) : new Date();
+  return {
+    id: project.id,
+    title: project.name,
+    summary: project.description || "Community impact initiative.",
+    category: project.status === "COMPLETED" ? "Impact" : "Community",
+    completionDate: createdAt.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    }),
+    impactMetric: "Impact metrics available in project details",
+    thumbnail: `https://picsum.photos/seed/${project.id}/900/500`,
+  };
+}
+
+function mapApiProjectToActive(project: ProjectApiRow, index: number): ActiveProject {
+  const simulatedProgress = Math.max(20, 78 - index * 14);
+  return {
+    id: project.id,
+    title: project.name,
+    nextMilestone: "Weekly project checkpoint",
+    lead: project.contactEmail || "Project coordinator",
+    progress: simulatedProgress,
+  };
+}
 
 export default function VolunteerDashboardPage() {
+  const router = useRouter();
   const [activeSidebarItem, setActiveSidebarItem] = useState("home");
   const [activeTab, setActiveTab] = useState<DashboardTab>("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [authStatus, setAuthStatus] = useState<"loading" | "ready" | "unavailable">(
+    "loading"
+  );
+  const [sessionUser, setSessionUser] = useState<SessionUser | null>(null);
+  const [volunteerData, setVolunteerData] = useState<Volunteer>(fallbackVolunteer);
+  const [completedProjects, setCompletedProjects] = useState<CompletedProject[]>(
+    fallbackCompletedProjects
+  );
+  const [activeProjects, setActiveProjects] =
+    useState<ActiveProject[]>(fallbackActiveProjects);
+  const [stats, setStats] = useState<Stat[]>(fallbackStats);
+  const [isDataLoading, setIsDataLoading] = useState(true);
+  const [dataError, setDataError] = useState<string>("");
 
   const panelTitle = useMemo(() => {
     if (activeTab === "projects") {
@@ -39,24 +119,245 @@ export default function VolunteerDashboardPage() {
     return "Making community impact through service, collaboration, and innovation";
   }, [activeTab]);
 
+  useEffect(() => {
+    let isCancelled = false;
+    let unsubscribe: (() => void) | undefined;
+
+    const loadAuthState = async () => {
+      try {
+        const [{ auth }, { onAuthStateChanged }] = await Promise.all([
+          import("../../lib/firebase"),
+          import("firebase/auth"),
+        ]);
+
+        unsubscribe = onAuthStateChanged(auth, (nextUser) => {
+          if (isCancelled) {
+            return;
+          }
+
+          if (!nextUser) {
+            setSessionUser(null);
+            setAuthStatus("ready");
+            return;
+          }
+
+          setSessionUser({
+            uid: nextUser.uid,
+            email: nextUser.email || "",
+            displayName: nextUser.displayName || "",
+          });
+          setAuthStatus("ready");
+        });
+      } catch {
+        if (isCancelled) {
+          return;
+        }
+
+        setSessionUser(null);
+        setAuthStatus("unavailable");
+      }
+    };
+
+    void loadAuthState();
+
+    return () => {
+      isCancelled = true;
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (authStatus !== "ready") {
+      return;
+    }
+
+    if (!sessionUser) {
+      router.replace("/");
+    }
+  }, [authStatus, router, sessionUser]);
+
+  useEffect(() => {
+    if (!sessionUser) {
+      return;
+    }
+
+    let isCancelled = false;
+
+    const loadLiveVolunteerDashboardData = async () => {
+      setIsDataLoading(true);
+      setDataError("");
+
+      try {
+        const [statsRes, volunteersRes, completedRes, activeRes] = await Promise.all([
+          fetch(`${ORCHESTRATOR_URL}/api/v1/stats`),
+          fetch(`${ORCHESTRATOR_URL}/api/v1/volunteers?limit=50&includeInactive=true`),
+          fetch(`${ORCHESTRATOR_URL}/api/v1/projects?scope=all&status=COMPLETED&limit=6`),
+          fetch(`${ORCHESTRATOR_URL}/api/v1/projects?scope=active&limit=6`),
+        ]);
+
+        if (isCancelled) {
+          return;
+        }
+
+        let completedCount = fallbackVolunteer.completedProjects;
+        if (completedRes.ok) {
+          const completedPayload = (await completedRes.json()) as {
+            data?: ProjectApiRow[];
+          };
+          const completedRows = completedPayload.data || [];
+          if (completedRows.length > 0) {
+            completedCount = completedRows.length;
+            setCompletedProjects(completedRows.map(mapApiProjectToCompleted));
+          }
+        }
+
+        if (statsRes.ok) {
+          const statsPayload = (await statsRes.json()) as StatsApi;
+          setStats([
+            {
+              id: "s1",
+              label: "Total Hours Served",
+              value: `${fallbackVolunteer.hoursVolunteered}h`,
+              hint: "Volunteer portfolio",
+            },
+            {
+              id: "s2",
+              label: "Completed Projects",
+              value: String(completedCount),
+              hint: "From project history",
+            },
+            {
+              id: "s3",
+              label: "Upcoming Events",
+              value: "4",
+              hint: "Next 30 days",
+            },
+            {
+              id: "s4",
+              label: "Badges Earned",
+              value: String(fallbackVolunteer.badgesEarned),
+              hint: `Network impact: ${statsPayload.totalImpact.toFixed(1)}`,
+            },
+          ]);
+        }
+
+        if (volunteersRes.ok) {
+          const volunteersPayload = (await volunteersRes.json()) as {
+            data?: VolunteerApiRow[];
+          };
+          const normalizedEmail = sessionUser.email.trim().toLowerCase();
+          const matchedVolunteer = (volunteersPayload.data || []).find(
+            (item) => item.email.trim().toLowerCase() === normalizedEmail
+          );
+
+          setVolunteerData((prev) => ({
+            ...prev,
+            name: sessionUser.displayName || matchedVolunteer?.fullName || prev.name,
+            role: "Community Volunteer",
+            bio:
+              matchedVolunteer?.skillSummary?.trim() ||
+              prev.bio,
+            location: prev.location,
+            completedProjects: prev.completedProjects,
+            availability:
+              activeProjects.length > 0
+                ? `Currently active on ${activeProjects.length} projects`
+                : "Available for new projects",
+          }));
+        } else {
+          setVolunteerData((prev) => ({
+            ...prev,
+            name: sessionUser.displayName || prev.name,
+          }));
+        }
+
+        if (activeRes.ok) {
+          const activePayload = (await activeRes.json()) as {
+            data?: ProjectApiRow[];
+          };
+          const activeRows = activePayload.data || [];
+          if (activeRows.length > 0) {
+            setActiveProjects(activeRows.map(mapApiProjectToActive));
+            setVolunteerData((prev) => ({
+              ...prev,
+              availability: `Currently active on ${activeRows.length} projects`,
+              currentlyActiveProjects: activeRows.length,
+            }));
+          } else {
+            setVolunteerData((prev) => ({
+              ...prev,
+              availability: "Available for new projects",
+              currentlyActiveProjects: 0,
+            }));
+          }
+        }
+      } catch {
+        if (!isCancelled) {
+          setDataError("Live data unavailable. Showing cached dashboard content.");
+        }
+      } finally {
+        if (!isCancelled) {
+          setIsDataLoading(false);
+        }
+      }
+    };
+
+    void loadLiveVolunteerDashboardData();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [sessionUser]);
+
+  if (authStatus === "loading" || (authStatus === "ready" && !sessionUser)) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#F6F7F5] text-slate-900">
+        <div className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700">
+          <Loader2 className="h-4 w-4 animate-spin" /> Loading volunteer workspace...
+        </div>
+      </main>
+    );
+  }
+
+  if (authStatus === "unavailable") {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#F6F7F5] px-4 text-center text-slate-900">
+        <div className="max-w-lg rounded-2xl border border-red-200 bg-white p-6">
+          <h1 className="text-xl font-bold">Auth is unavailable</h1>
+          <p className="mt-2 text-sm text-slate-600">
+            Firebase configuration is missing for this environment. Set the public Firebase variables and redeploy.
+          </p>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-[#F6F7F5] text-slate-900">
       <Sidebar
         navItems={sidebarNav}
         activeItem={activeSidebarItem}
         onSelect={(itemId) => setActiveSidebarItem(itemId)}
-        profileName={volunteer.name}
+        profileName={volunteerData.name}
         profileRole="Volunteer"
-        profileCompletion={volunteer.profileCompletion}
+        profileCompletion={volunteerData.profileCompletion}
         isOpen={sidebarOpen}
         onToggle={() => setSidebarOpen((current) => !current)}
       />
 
       <div className="lg:pl-[280px]">
         <div className="mx-auto max-w-[1560px] p-4 pt-20 lg:p-8 lg:pt-8">
+          {dataError ? (
+            <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
+              {dataError}
+            </div>
+          ) : null}
+
           <div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
             <div>
-              <VolunteerProfileCard volunteer={volunteer} />
+              <VolunteerProfileCard volunteer={volunteerData} />
             </div>
 
             <div>
@@ -150,7 +451,9 @@ export default function VolunteerDashboardPage() {
                           <FolderKanban className="h-3.5 w-3.5" /> Opportunity
                         </div>
                         <h3 className="text-xl font-bold text-slate-900">{rec.title}</h3>
-                        <p className="mt-1 text-sm font-medium text-slate-600">{rec.location} • {rec.commitment}</p>
+                        <p className="mt-1 text-sm font-medium text-slate-600">
+                          {rec.location} • {rec.commitment}
+                        </p>
                         <p className="mt-3 text-sm text-slate-600">{rec.reason}</p>
                         <button
                           type="button"
@@ -168,7 +471,7 @@ export default function VolunteerDashboardPage() {
         </div>
       </div>
 
-      <FloatingActions />
+      {!isDataLoading ? <FloatingActions /> : null}
     </main>
   );
 }
