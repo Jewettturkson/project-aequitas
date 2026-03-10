@@ -1009,12 +1009,7 @@ export default function Page() {
               {status === "loading" ? "Checking Docker DB..." : `Status: Docker DB ${status}`}
             </div>
 
-            {authStatus === "loading" ? (
-              <div className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-700">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Checking session...
-              </div>
-            ) : authStatus === "unavailable" ? (
+            {authStatus === "unavailable" ? (
               <div className="inline-flex items-center gap-2 rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-sm font-semibold text-amber-700">
                 <ShieldX className="h-4 w-4" />
                 Firebase auth not configured.
