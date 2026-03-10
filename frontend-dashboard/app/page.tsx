@@ -154,6 +154,21 @@ function getClientErrorMessage(error: unknown, fallback: string) {
   return fallback;
 }
 
+function getPostAuthRedirectPath() {
+  if (typeof window === "undefined") {
+    return "/volunteer-dashboard";
+  }
+
+  const query = new URLSearchParams(window.location.search);
+  const next = (query.get("next") || "").trim();
+
+  if (!next.startsWith("/") || next.startsWith("//")) {
+    return "/volunteer-dashboard";
+  }
+
+  return next;
+}
+
 export default function Page() {
   const router = useRouter();
   const [status, setStatus] = useState<"loading" | "connected" | "disconnected">(
@@ -446,7 +461,7 @@ export default function Page() {
 
     if (sessionUser && !sessionUser.hasManagerAccess) {
       setIsRoutingVolunteer(true);
-      router.replace("/volunteer-dashboard");
+      router.replace(getPostAuthRedirectPath());
       return;
     }
 
