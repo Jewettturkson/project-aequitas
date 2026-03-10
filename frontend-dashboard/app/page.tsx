@@ -902,6 +902,100 @@ export default function Page() {
     }
   };
 
+  if (authStatus === "loading") {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#f3f4f6] text-[#13161a]">
+        <div className="inline-flex items-center gap-2 rounded-full border border-[#d7dbe1] bg-white px-4 py-2 text-sm font-semibold">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Checking session...
+        </div>
+      </main>
+    );
+  }
+
+  if (!sessionUser) {
+    return (
+      <main className="flex min-h-screen flex-col bg-[#f3f4f6] text-[#13161a]">
+        <header className="px-8 pb-6 pt-6">
+          <div className="text-5xl font-black tracking-tight">TurkNode</div>
+        </header>
+
+        <section className="flex flex-1 items-center justify-center px-6">
+          <div className="w-full max-w-md">
+            <h1 className="text-center text-5xl font-black tracking-tight">Welcome to TurkNode</h1>
+            <p className="mt-3 text-center text-lg text-[#5e6570]">
+              Volunteer and project collaboration for impact teams.
+            </p>
+
+            <button
+              type="button"
+              onClick={() => {
+                void handleGoogleSignIn();
+              }}
+              disabled={isAuthActionPending || authStatus === "unavailable"}
+              className="mt-8 inline-flex w-full items-center justify-center rounded-xl border border-[#ced4dc] bg-white px-4 py-3 text-base font-semibold text-[#13161a] transition hover:bg-[#fafbfc] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isAuthActionPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Continue with Google"}
+            </button>
+
+            <div className="my-6 border-t border-[#d9dee5]" />
+
+            <form
+              onSubmit={(event) => {
+                void handleEmailSignIn(event);
+              }}
+              className="space-y-3"
+            >
+              <div>
+                <label className="mb-1 block text-sm font-semibold text-[#3e4650]">Email</label>
+                <input
+                  type="email"
+                  value={emailAuth.email}
+                  onChange={(event) =>
+                    setEmailAuth((prev) => ({ ...prev, email: event.target.value }))
+                  }
+                  placeholder="Type your email"
+                  className="w-full rounded-xl border border-[#ced4dc] bg-white px-3 py-2.5 text-sm text-[#13161a] outline-none focus:border-[#0b2e59]"
+                  required
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-semibold text-[#3e4650]">Password</label>
+                <input
+                  type="password"
+                  value={emailAuth.password}
+                  onChange={(event) =>
+                    setEmailAuth((prev) => ({ ...prev, password: event.target.value }))
+                  }
+                  placeholder="Type your password"
+                  className="w-full rounded-xl border border-[#ced4dc] bg-white px-3 py-2.5 text-sm text-[#13161a] outline-none focus:border-[#0b2e59]"
+                  required
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={isAuthActionPending || authStatus === "unavailable"}
+                className="inline-flex w-full items-center justify-center rounded-xl bg-[#13161a] px-4 py-3 text-base font-semibold text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isAuthActionPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Continue with email"}
+              </button>
+            </form>
+
+            {authStatus === "unavailable" ? (
+              <p className="mt-3 text-center text-sm text-red-700">
+                Firebase auth is unavailable. Check frontend auth environment settings.
+              </p>
+            ) : null}
+          </div>
+        </section>
+
+        <footer className="border-t border-[#d7dbe1] px-6 py-6 text-center text-sm text-[#5e6570]">
+          By continuing, you agree to TurkNode Terms of Use and Privacy Policy.
+        </footer>
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-white text-[#0b2e59]">
       <header className="border-b border-[#0b2e59] bg-[#0b2e59] text-white">
