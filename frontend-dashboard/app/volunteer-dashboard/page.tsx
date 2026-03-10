@@ -132,6 +132,15 @@ export default function VolunteerDashboardPage() {
     return () => window.removeEventListener("popstate", syncFromUrl);
   }, [activeSection, setActiveSection]);
 
+  useEffect(() => {
+    if (authStatus === "ready" && !profile) {
+      const next = encodeURIComponent(
+        "/volunteer-dashboard" + (typeof window !== "undefined" ? window.location.search : "")
+      );
+      router.replace(`/?next=${next}`);
+    }
+  }, [authStatus, profile, router]);
+
   if (authStatus === "loading") {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#F6F7F5] text-slate-900">
@@ -154,15 +163,6 @@ export default function VolunteerDashboardPage() {
       </main>
     );
   }
-
-  useEffect(() => {
-    if (authStatus === "ready" && !profile) {
-      const next = encodeURIComponent(
-        "/volunteer-dashboard" + (typeof window !== "undefined" ? window.location.search : "")
-      );
-      router.replace(`/?next=${next}`);
-    }
-  }, [authStatus, profile, router]);
 
   if (!profile) {
     return (
