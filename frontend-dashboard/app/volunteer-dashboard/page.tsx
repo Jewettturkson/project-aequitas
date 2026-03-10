@@ -155,11 +155,20 @@ export default function VolunteerDashboardPage() {
     );
   }
 
+  useEffect(() => {
+    if (authStatus === "ready" && !profile) {
+      const next = encodeURIComponent(
+        "/volunteer-dashboard" + (typeof window !== "undefined" ? window.location.search : "")
+      );
+      router.replace(`/?next=${next}`);
+    }
+  }, [authStatus, profile, router]);
+
   if (!profile) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#F6F7F5] p-6 text-center">
         <div className="rounded-2xl border border-slate-200 bg-white p-6">
-          <p className="mb-3 text-slate-700">No active volunteer session found.</p>
+          <p className="mb-3 text-slate-700">Redirecting to sign in...</p>
           <button
             type="button"
             onClick={() =>

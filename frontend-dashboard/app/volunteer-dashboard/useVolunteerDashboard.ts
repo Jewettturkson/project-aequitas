@@ -101,6 +101,28 @@ export function useVolunteerDashboard() {
         await refreshAll(user.uid);
         setAuthStatus('ready');
       } catch (err) {
+        setProfile({
+          uid: user.uid,
+          email: user.email || '',
+          displayName: user.displayName || 'TurkNode Volunteer',
+          role: 'volunteer',
+          bio: 'Volunteer profile is initializing. Please refresh shortly.',
+          location: '',
+          interests: [],
+          skills: [],
+          availableForProjects: true,
+          hoursContributed: 0,
+          completedProjects: 0,
+          impactScore: 0,
+          badgesEarned: [],
+          notificationPrefs: {
+            projectInvites: true,
+            milestones: true,
+            badges: true,
+            messages: true,
+          },
+          profileCompletion: 20,
+        });
         setError(err instanceof Error ? err.message : 'Failed to initialize dashboard data.');
         setAuthStatus('ready');
       }
