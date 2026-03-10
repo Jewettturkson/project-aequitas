@@ -214,6 +214,7 @@ export default function Page() {
   );
   const [sessionUser, setSessionUser] = useState<SessionUser | null>(null);
   const [isAuthActionPending, setIsAuthActionPending] = useState(false);
+  const [authActionError, setAuthActionError] = useState("");
   const [showEmailSignIn, setShowEmailSignIn] = useState(false);
   const [emailAuth, setEmailAuth] = useState<EmailAuthState>({
     email: "",
@@ -470,24 +471,47 @@ export default function Page() {
 
   const handleGoogleSignIn = async () => {
     setIsAuthActionPending(true);
+    setAuthActionError("");
     try {
-      const [{ auth }, { GoogleAuthProvider, signInWithPopup }] = await Promise.all([
+      const [{ auth }, { GoogleAuthProvider, signInWithPopup, signInWithRedirect }] =
+        await Promise.all([
         import("../lib/firebase"),
         import("firebase/auth"),
-      ]);
+        ]);
 
       if (!auth) {
         showToast("error", "Authentication is unavailable in this environment.");
+        setAuthActionError("Authentication is unavailable in this environment.");
         return;
       }
 
-      await signInWithPopup(auth, new GoogleAuthProvider());
+      const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: "select_account" });
+      try {
+        await signInWithPopup(auth, provider);
+      } catch (popupError) {
+        const code = (popupError as { code?: string } | null)?.code || "";
+        const shouldFallbackToRedirect =
+          code === "auth/popup-blocked" ||
+          code === "auth/cancelled-popup-request" ||
+          code === "auth/operation-not-supported-in-this-environment";
+
+        if (shouldFallbackToRedirect) {
+          await signInWithRedirect(auth, provider);
+          return;
+        }
+
+        throw popupError;
+      }
+
       showToast("success", "Signed in with Google.");
       setShowEmailSignIn(false);
       setEmailAuth((prev) => ({ ...prev, password: "" }));
       router.replace(getPostAuthRedirectPath());
     } catch (error) {
-      showToast("error", getClientErrorMessage(error, "Unable to sign in with Google."));
+      const message = getClientErrorMessage(error, "Unable to sign in with Google.");
+      setAuthActionError(message);
+      showToast("error", message);
     } finally {
       setIsAuthActionPending(false);
     }
@@ -500,10 +524,12 @@ export default function Page() {
 
     if (!normalizedEmail || !password) {
       showToast("error", "Email and password are required.");
+      setAuthActionError("Email and password are required.");
       return;
     }
 
     setIsAuthActionPending(true);
+    setAuthActionError("");
     try {
       const [{ auth }, { signInWithEmailAndPassword }] = await Promise.all([
         import("../lib/firebase"),
@@ -512,6 +538,7 @@ export default function Page() {
 
       if (!auth) {
         showToast("error", "Authentication is unavailable in this environment.");
+        setAuthActionError("Authentication is unavailable in this environment.");
         return;
       }
 
@@ -521,7 +548,9 @@ export default function Page() {
       setShowEmailSignIn(false);
       router.replace(getPostAuthRedirectPath());
     } catch (error) {
-      showToast("error", getClientErrorMessage(error, "Unable to sign in with email."));
+      const message = getClientErrorMessage(error, "Unable to sign in with email.");
+      setAuthActionError(message);
+      showToast("error", message);
     } finally {
       setIsAuthActionPending(false);
     }
@@ -529,6 +558,7 @@ export default function Page() {
 
   const handleSignOut = async () => {
     setIsAuthActionPending(true);
+    setAuthActionError("");
     try {
       const [{ auth }, { signOut }] = await Promise.all([
         import("../lib/firebase"),
@@ -543,7 +573,9 @@ export default function Page() {
       await signOut(auth);
       showToast("success", "Signed out.");
     } catch (error) {
-      showToast("error", getClientErrorMessage(error, "Unable to sign out."));
+      const message = getClientErrorMessage(error, "Unable to sign out.");
+      setAuthActionError(message);
+      showToast("error", message);
     } finally {
       setIsAuthActionPending(false);
     }
@@ -1055,6 +1087,11 @@ export default function Page() {
             {authStatus === "unavailable" ? (
               <p className="mt-3 text-center text-sm text-red-700">
                 Firebase auth is unavailable. Check frontend auth environment settings.
+              </p>
+            ) : null}
+            {authActionError ? (
+              <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {authActionError}
               </p>
             ) : null}
           </div>
