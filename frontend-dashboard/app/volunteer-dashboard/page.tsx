@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Bell, CheckCircle2, Loader2 } from "lucide-react";
 import FloatingActions from "./components/FloatingActions";
@@ -11,6 +11,7 @@ import VolunteerProfileCard from "./components/VolunteerProfileCard";
 import { sidebarNav } from "./mockData";
 import type { DashboardTab } from "./types";
 import { useVolunteerDashboard } from "./useVolunteerDashboard";
+import type { NavSection } from "./useVolunteerDashboard";
 
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -94,6 +95,43 @@ export default function VolunteerDashboardPage() {
       ? "bg-slate-100"
       : "bg-[#F6F7F5]";
 
+  const validSections: NavSection[] = [
+    "home",
+    "discover",
+    "contributions",
+    "messages",
+    "opportunities",
+    "events",
+    "reports",
+    "saved",
+    "settings",
+  ];
+
+  useEffect(() => {
+    const syncFromUrl = () => {
+      if (typeof window === "undefined") return;
+      const query = new URLSearchParams(window.location.search);
+      const sectionFromUrl = (query.get("section") || "").toLowerCase();
+      const normalizedSection = validSections.includes(sectionFromUrl as NavSection)
+        ? (sectionFromUrl as NavSection)
+        : "home";
+      if (normalizedSection !== activeSection) {
+        setActiveSection(normalizedSection);
+        if (normalizedSection === "discover") {
+          setActiveTab("projects");
+        } else if (normalizedSection === "opportunities") {
+          setActiveTab("recommendations");
+        } else if (normalizedSection === "home") {
+          setActiveTab("overview");
+        }
+      }
+    };
+
+    syncFromUrl();
+    window.addEventListener("popstate", syncFromUrl);
+    return () => window.removeEventListener("popstate", syncFromUrl);
+  }, [activeSection, setActiveSection]);
+
   if (authStatus === "loading") {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#F6F7F5] text-slate-900">
@@ -124,7 +162,15 @@ export default function VolunteerDashboardPage() {
           <p className="mb-3 text-slate-700">No active volunteer session found.</p>
           <button
             type="button"
-            onClick={() => router.push("/")}
+            onClick={() =>
+              router.push(
+                `/` +
+                  `?next=${encodeURIComponent(
+                    "/volunteer-dashboard" +
+                      (typeof window !== "undefined" ? window.location.search : "")
+                  )}`
+              )
+            }
             className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
           >
             Return to sign in
@@ -580,7 +626,18 @@ export default function VolunteerDashboardPage() {
       <Sidebar
         navItems={sidebarNav}
         activeItem={activeSection}
-        onSelect={(itemId) => setActiveSection(itemId as any)}
+        onSelect={(itemId) => {
+          const next = itemId as NavSection;
+          setActiveSection(next);
+          if (next === "discover") {
+            setActiveTab("projects");
+          } else if (next === "opportunities") {
+            setActiveTab("recommendations");
+          } else if (next === "home") {
+            setActiveTab("overview");
+          }
+          router.replace(`/volunteer-dashboard?section=${next}`, { scroll: false });
+        }}
         profileName={profile.displayName}
         profileRole="Volunteer"
         profileCompletion={profile.profileCompletion}
