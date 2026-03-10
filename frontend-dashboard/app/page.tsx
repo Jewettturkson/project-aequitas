@@ -485,6 +485,7 @@ export default function Page() {
       showToast("success", "Signed in with Google.");
       setShowEmailSignIn(false);
       setEmailAuth((prev) => ({ ...prev, password: "" }));
+      router.replace(getPostAuthRedirectPath());
     } catch (error) {
       showToast("error", getClientErrorMessage(error, "Unable to sign in with Google."));
     } finally {
@@ -518,6 +519,7 @@ export default function Page() {
       showToast("success", "Signed in with email.");
       setEmailAuth({ email: normalizedEmail, password: "" });
       setShowEmailSignIn(false);
+      router.replace(getPostAuthRedirectPath());
     } catch (error) {
       showToast("error", getClientErrorMessage(error, "Unable to sign in with email."));
     } finally {
