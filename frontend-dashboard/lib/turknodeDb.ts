@@ -42,6 +42,18 @@ export type ProjectDoc = {
   projectLead: string;
 };
 
+export type CreateProjectInput = {
+  title: string;
+  description: string;
+  category: string;
+  location: string;
+  skillsRequired: string[];
+  startDate: string;
+  endDate: string;
+  impactMetric: string;
+  projectLead: string;
+};
+
 export type ContributionDoc = {
   id: string;
   uid: string;
@@ -266,6 +278,30 @@ export async function listProjects() {
   return listCollection<ProjectDoc>('projects');
 }
 
+export async function createProject(input: CreateProjectInput) {
+  const title = input.title.trim();
+  const description = input.description.trim();
+  if (title.length < 3) throw new Error('Project title must be at least 3 characters.');
+  if (description.length < 20) throw new Error('Project description must be at least 20 characters.');
+
+  const id = await addDocument('projects', {
+    title,
+    description,
+    category: input.category.trim() || 'Community',
+    location: input.location.trim() || 'Remote',
+    skillsRequired: input.skillsRequired.filter(Boolean),
+    startDate: input.startDate,
+    endDate: input.endDate,
+    impactMetric: input.impactMetric.trim() || 'Community members supported',
+    status: 'active',
+    participants: [],
+    participantCount: 0,
+    projectLead: input.projectLead.trim(),
+  });
+
+  return id;
+}
+
 export async function joinProject(uid: string, projectId: string) {
   const project = await getDocument<ProjectDoc>('projects', projectId);
   if (!project) throw new Error('Project not found.');
@@ -480,10 +516,10 @@ export async function seedIfEmpty(uid: string, email: string, displayName: strin
       email,
       displayName,
       role: 'volunteer',
-      bio: 'I support sustainability and education initiatives through consistent community service.',
-      location: 'Philadelphia, PA',
-      interests: ['Sustainability', 'Education', 'Community Outreach'],
-      skills: ['Coordination', 'Teaching', 'Field Support'],
+      bio: '',
+      location: '',
+      interests: [],
+      skills: [],
       availableForProjects: true,
       badgesEarned: [],
       hoursContributed: 0,
@@ -495,7 +531,7 @@ export async function seedIfEmpty(uid: string, email: string, displayName: strin
         badges: true,
         messages: true,
       },
-      profileCompletion: 80,
+      profileCompletion: 20,
     });
   }
 
@@ -540,8 +576,8 @@ export async function seedIfEmpty(uid: string, email: string, displayName: strin
         endDate: '2026-02-20',
         impactMetric: 'Residents assisted',
         status: 'completed',
-        participants: [uid],
-        participantCount: 1,
+        participants: [],
+        participantCount: 0,
         projectLead: 'tech4good@turknode.org',
       },
     ];

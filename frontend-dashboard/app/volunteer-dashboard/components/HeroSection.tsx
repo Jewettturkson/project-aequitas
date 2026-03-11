@@ -16,7 +16,7 @@ export default function HeroSection({ title }: HeroSectionProps) {
           View AI suggestions
         </button>
       </div>
-      <h1 className="max-w-3xl text-3xl font-black leading-[1.05] tracking-tight text-slate-900 md:text-5xl xl:text-[3.4rem]">
+      <h1 className="max-w-3xl text-2xl font-black leading-[1.08] tracking-tight text-slate-900 md:text-4xl xl:text-[3rem]">
         {title}
       </h1>
     </section>

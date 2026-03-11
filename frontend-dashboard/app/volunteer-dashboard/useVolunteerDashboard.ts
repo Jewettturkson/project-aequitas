@@ -175,12 +175,12 @@ export function useVolunteerDashboard() {
   }, [uid, refreshAll]);
 
   const activeProjects = useMemo(
-    () => projects.filter((p) => p.status === 'active'),
-    [projects]
+    () => projects.filter((p) => p.status === 'active' && (p.participants || []).includes(uid)),
+    [projects, uid]
   );
   const completedProjects = useMemo(
-    () => projects.filter((p) => p.status === 'completed'),
-    [projects]
+    () => projects.filter((p) => p.status === 'completed' && (p.participants || []).includes(uid)),
+    [projects, uid]
   );
 
   const filteredProjects = useMemo(() => {

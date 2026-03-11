@@ -87,6 +87,7 @@ type EmailAuthState = {
 
 type DashboardView = "volunteer" | "manager";
 type LandingSection = "mission" | "projects" | "impact" | "join";
+type SignInRole = "volunteer" | "lead";
 
 const ORCHESTRATOR_URL =
   process.env.NEXT_PUBLIC_ORCHESTRATOR_URL || "http://localhost:3000";
@@ -155,16 +156,18 @@ function getClientErrorMessage(error: unknown, fallback: string) {
   return fallback;
 }
 
-function getPostAuthRedirectPath() {
+function getPostAuthRedirectPath(desiredRole?: SignInRole) {
   if (typeof window === "undefined") {
-    return "/volunteer-dashboard";
+    return desiredRole === "lead" ? "/project-lead-dashboard" : "/volunteer-dashboard";
   }
 
   const query = new URLSearchParams(window.location.search);
   const next = (query.get("next") || "").trim();
 
   if (!next.startsWith("/") || next.startsWith("//")) {
-    return "/volunteer-dashboard";
+    const roleFromStorage = window.localStorage.getItem("turknode:authRole");
+    const role = desiredRole || (roleFromStorage === "lead" ? "lead" : "volunteer");
+    return role === "lead" ? "/project-lead-dashboard" : "/volunteer-dashboard";
   }
 
   return next;
@@ -235,12 +238,19 @@ export default function Page() {
   const [feedbackBusyVolunteerId, setFeedbackBusyVolunteerId] = useState<string | null>(null);
   const [dashboardView, setDashboardView] = useState<DashboardView>("volunteer");
   const [isRoutingVolunteer, setIsRoutingVolunteer] = useState(false);
+  const [selectedSignInRole, setSelectedSignInRole] = useState<SignInRole>("volunteer");
   const [activeLandingSection, setActiveLandingSection] =
     useState<LandingSection>("mission");
   const authCardRef = useRef<HTMLDivElement | null>(null);
 
   const showToast = (tone: ToastState["tone"], message: string) => {
     setToast({ tone, message });
+  };
+
+  const getDesiredRole = () => {
+    if (typeof window === "undefined") return selectedSignInRole;
+    const fromStorage = window.localStorage.getItem("turknode:authRole");
+    return fromStorage === "lead" ? "lead" : "volunteer";
   };
 
   const validateVolunteerForm = () => {
@@ -389,9 +399,36 @@ export default function Page() {
 
           try {
             const idToken = await nextUser.getIdTokenResult();
-            const managerAccess = hasManagerAccessFromClaims(
+            const managerAccessFromClaims = hasManagerAccessFromClaims(
               idToken.claims as Record<string, unknown>
             );
+            const desiredRole = getDesiredRole();
+            let managerAccess = managerAccessFromClaims;
+
+            try {
+              const { getUserProfile, upsertUserProfile } = await import("../lib/turknodeDb");
+              const existingProfile = await getUserProfile(nextUser.uid);
+              const roleFromProfile = existingProfile?.role || "volunteer";
+
+              if (!existingProfile) {
+                await upsertUserProfile(nextUser.uid, {
+                  uid: nextUser.uid,
+                  email: nextUser.email || "",
+                  displayName: nextUser.displayName || "TurkNode User",
+                  role: desiredRole === "lead" ? "manager" : "volunteer",
+                  availableForProjects: true,
+                });
+              } else if (desiredRole === "lead" && roleFromProfile !== "manager") {
+                await upsertUserProfile(nextUser.uid, {
+                  ...existingProfile,
+                  role: "manager",
+                });
+              }
+
+              managerAccess = managerAccessFromClaims || roleFromProfile === "manager" || desiredRole === "lead";
+            } catch {
+              managerAccess = managerAccessFromClaims || desiredRole === "lead";
+            }
 
             setSessionUser({
               uid: nextUser.uid,
@@ -476,6 +513,12 @@ export default function Page() {
   };
 
   const startJoinFlow = (role: "volunteer" | "lead" | "partner") => {
+    if (role === "volunteer" || role === "lead") {
+      setSelectedSignInRole(role);
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem("turknode:authRole", role);
+      }
+    }
     setShowEmailSignIn(true);
     if (role === "lead") {
       showToast("success", "Project lead onboarding starts with account creation.");
@@ -510,9 +553,14 @@ export default function Page() {
       return;
     }
 
-    if (sessionUser && !sessionUser.hasManagerAccess) {
+    if (sessionUser) {
       setIsRoutingVolunteer(true);
-      router.replace(getPostAuthRedirectPath());
+      const desiredRole = getDesiredRole();
+      const fallbackPath = sessionUser.hasManagerAccess || desiredRole === "lead"
+        ? "/project-lead-dashboard"
+        : "/volunteer-dashboard";
+      const redirectPath = getPostAuthRedirectPath(desiredRole);
+      router.replace(redirectPath || fallbackPath);
       return;
     }
 
@@ -537,6 +585,9 @@ export default function Page() {
 
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: "select_account" });
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem("turknode:authRole", selectedSignInRole);
+      }
       try {
         await signInWithPopup(auth, provider);
       } catch (popupError) {
@@ -557,7 +608,7 @@ export default function Page() {
       showToast("success", "Signed in with Google.");
       setShowEmailSignIn(false);
       setEmailAuth((prev) => ({ ...prev, password: "" }));
-      router.replace(getPostAuthRedirectPath());
+      router.replace(getPostAuthRedirectPath(selectedSignInRole));
     } catch (error) {
       const message = getClientErrorMessage(error, "Unable to sign in with Google.");
       setAuthActionError(message);
@@ -593,10 +644,13 @@ export default function Page() {
       }
 
       await signInWithEmailAndPassword(auth, normalizedEmail, password);
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem("turknode:authRole", selectedSignInRole);
+      }
       showToast("success", "Signed in with email.");
       setEmailAuth({ email: normalizedEmail, password: "" });
       setShowEmailSignIn(false);
-      router.replace(getPostAuthRedirectPath());
+      router.replace(getPostAuthRedirectPath(selectedSignInRole));
     } catch (error) {
       const message = getClientErrorMessage(error, "Unable to sign in with email.");
       setAuthActionError(message);
@@ -1137,6 +1191,40 @@ export default function Page() {
           >
             <h2 className="text-3xl font-black tracking-tight text-[#0b1a37]">Welcome back</h2>
             <p className="mt-2 text-sm text-slate-600">Sign in to continue your volunteer journey.</p>
+            <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl border border-slate-200 bg-slate-50 p-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedSignInRole("volunteer");
+                  if (typeof window !== "undefined") {
+                    window.localStorage.setItem("turknode:authRole", "volunteer");
+                  }
+                }}
+                className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${
+                  selectedSignInRole === "volunteer"
+                    ? "bg-white text-[#0b1a37] shadow-sm"
+                    : "text-slate-600 hover:text-slate-800"
+                }`}
+              >
+                Sign in as Volunteer
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedSignInRole("lead");
+                  if (typeof window !== "undefined") {
+                    window.localStorage.setItem("turknode:authRole", "lead");
+                  }
+                }}
+                className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${
+                  selectedSignInRole === "lead"
+                    ? "bg-white text-[#0b1a37] shadow-sm"
+                    : "text-slate-600 hover:text-slate-800"
+                }`}
+              >
+                Sign in as Project Lead
+              </button>
+            </div>
 
             <button
               type="button"
