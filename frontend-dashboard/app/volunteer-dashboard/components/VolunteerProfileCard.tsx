@@ -13,7 +13,7 @@ export default function VolunteerProfileCard({
   onToggleAvailability,
 }: VolunteerProfileCardProps) {
   return (
-    <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+    <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-300 hover:border-slate-300 hover:shadow-md">
       <div className="mb-5 flex flex-col items-center text-center">
         {volunteer.photoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -32,7 +32,7 @@ export default function VolunteerProfileCard({
       <button
         type="button"
         onClick={onEditProfile}
-        className="mb-4 w-full rounded-xl bg-[#0E1628] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#15223a]"
+        className="mb-4 w-full rounded-xl bg-[#0E1628] px-4 py-3 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#15223a] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
       >
         Edit Profile
       </button>
@@ -40,7 +40,7 @@ export default function VolunteerProfileCard({
       <button
         type="button"
         onClick={onToggleAvailability}
-        className={`mb-6 w-full rounded-xl border px-3 py-2 text-sm font-medium transition ${
+        className={`mb-6 w-full rounded-xl border px-3 py-2 text-sm font-medium transition-all duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 ${
           volunteer.availableForProjects
             ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
             : "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
@@ -57,7 +57,7 @@ export default function VolunteerProfileCard({
           {[...(volunteer.skills || []), ...(volunteer.interests || [])].slice(0, 8).map((interest) => (
             <span
               key={interest}
-              className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700"
+              className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700"
             >
               {interest}
             </span>

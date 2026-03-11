@@ -2,7 +2,20 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, CheckCircle2, Loader2, LogOut } from "lucide-react";
+import {
+  BarChart3,
+  Bell,
+  CalendarClock,
+  CheckCircle2,
+  ClipboardCheck,
+  Hourglass,
+  Inbox,
+  Loader2,
+  LogOut,
+  MapPin,
+  MessageCircle,
+  Sparkles,
+} from "lucide-react";
 import FloatingActions from "./components/FloatingActions";
 import HeroSection from "./components/HeroSection";
 import Sidebar from "./components/Sidebar";
@@ -54,8 +67,8 @@ async function fileToDataUrl(file: File) {
 
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-      <h2 className="mb-4 text-2xl font-black tracking-tight text-slate-900">{title}</h2>
+    <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-300 hover:border-slate-300 hover:shadow-md">
+      <h2 className="mb-4 text-xl font-black tracking-tight text-slate-900 sm:text-2xl">{title}</h2>
       {children}
     </section>
   );
@@ -283,20 +296,28 @@ export default function VolunteerDashboardPage() {
         <div className="space-y-5">
           <SectionCard title="Live Dashboard Signals">
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <div className="rounded-2xl border border-slate-200 p-4">
-                <p className="text-xs uppercase text-slate-500">Active projects</p>
+              <div className="rounded-2xl border border-cyan-100 bg-cyan-50/30 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm">
+                <p className="flex items-center gap-1 text-xs uppercase text-slate-500">
+                  <Hourglass className="h-3.5 w-3.5 text-cyan-600" /> Active projects
+                </p>
                 <p className="mt-2 text-2xl font-black">{activeProjects.length}</p>
               </div>
-              <div className="rounded-2xl border border-slate-200 p-4">
-                <p className="text-xs uppercase text-slate-500">Completed projects</p>
+              <div className="rounded-2xl border border-emerald-100 bg-emerald-50/30 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm">
+                <p className="flex items-center gap-1 text-xs uppercase text-slate-500">
+                  <ClipboardCheck className="h-3.5 w-3.5 text-emerald-600" /> Completed projects
+                </p>
                 <p className="mt-2 text-2xl font-black">{completedProjects.length}</p>
               </div>
-              <div className="rounded-2xl border border-slate-200 p-4">
-                <p className="text-xs uppercase text-slate-500">Hours logged</p>
+              <div className="rounded-2xl border border-violet-100 bg-violet-50/30 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm">
+                <p className="flex items-center gap-1 text-xs uppercase text-slate-500">
+                  <BarChart3 className="h-3.5 w-3.5 text-violet-600" /> Hours logged
+                </p>
                 <p className="mt-2 text-2xl font-black">{totalHours.toFixed(1)}h</p>
               </div>
-              <div className="rounded-2xl border border-slate-200 p-4">
-                <p className="text-xs uppercase text-slate-500">Unread notifications</p>
+              <div className="rounded-2xl border border-amber-100 bg-amber-50/30 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm">
+                <p className="flex items-center gap-1 text-xs uppercase text-slate-500">
+                  <Inbox className="h-3.5 w-3.5 text-amber-600" /> Unread notifications
+                </p>
                 <p className="mt-2 text-2xl font-black">{unreadNotifications}</p>
               </div>
             </div>
@@ -305,10 +326,29 @@ export default function VolunteerDashboardPage() {
           <SectionCard title="Completed Projects">
             <div className="grid gap-4 md:grid-cols-2">
               {completedProjects.length === 0 ? (
-                <p className="text-sm text-slate-600">No completed projects yet. Your contributions will appear here.</p>
+                <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
+                  <p className="text-base font-semibold text-slate-800">Start making an impact</p>
+                  <p className="mt-1 text-sm text-slate-600">
+                    Join a project and log your hours. Completed initiatives will appear here.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveSection("discover");
+                      setActiveTab("projects");
+                      router.replace("/volunteer-dashboard?section=discover", { scroll: false });
+                    }}
+                    className="mt-3 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
+                  >
+                    Discover Projects
+                  </button>
+                </div>
               ) : (
                 completedProjects.map((project) => (
-                  <article key={project.id} className="rounded-2xl border border-slate-200 p-4">
+                  <article
+                    key={project.id}
+                    className="rounded-2xl border border-slate-200 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-sm"
+                  >
                     <p className="text-xs font-semibold uppercase text-slate-500">{project.category}</p>
                     <h3 className="mt-1 text-lg font-bold">{project.title}</h3>
                     <p className="mt-1 text-sm text-slate-600">{project.description}</p>
@@ -356,7 +396,10 @@ export default function VolunteerDashboardPage() {
               const joined = (project.participants || []).includes(profile.uid);
               const saved = savedProjectIds.includes(String(project.id));
               return (
-                <article key={String(project.id)} className="rounded-2xl border border-slate-200 p-4 transition hover:border-slate-300">
+                <article
+                  key={String(project.id)}
+                  className="rounded-2xl border border-slate-200 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-sm"
+                >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <p className="text-xs font-semibold uppercase text-slate-500">{project.category} • {project.location}</p>
@@ -367,7 +410,7 @@ export default function VolunteerDashboardPage() {
                       <button
                         type="button"
                         onClick={() => void onSaveProject(String(project.id))}
-                        className="rounded-full border border-slate-300 px-3 py-1.5 text-xs font-semibold hover:bg-slate-100"
+                        className="rounded-full border border-slate-300 px-3 py-1.5 text-xs font-semibold transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
                       >
                         {saved ? "Unsave" : "Save"}
                       </button>
@@ -375,7 +418,7 @@ export default function VolunteerDashboardPage() {
                         <button
                           type="button"
                           onClick={() => void onLeaveProject(String(project.id))}
-                          className="rounded-full border border-red-300 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50"
+                          className="rounded-full border border-red-300 px-3 py-1.5 text-xs font-semibold text-red-600 transition-all duration-200 hover:-translate-y-0.5 hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300/70"
                         >
                           Leave
                         </button>
@@ -383,7 +426,7 @@ export default function VolunteerDashboardPage() {
                         <button
                           type="button"
                           onClick={() => void onJoinProject(String(project.id))}
-                          className="rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-700"
+                          className="rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
                         >
                           Join Project
                         </button>
@@ -421,11 +464,13 @@ export default function VolunteerDashboardPage() {
     if (activeSection === "discover") {
       return (
         <SectionCard title="Discover Projects">
-          <p className="mb-3 text-sm text-slate-600">Browse and join active community projects aligned with your mission interests.</p>
+          <p className="mb-3 text-sm text-slate-600">
+            Browse active opportunities aligned with your skills, location, and community goals.
+          </p>
           <button
             type="button"
             onClick={() => setActiveTab("projects")}
-            className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
+            className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
           >
             Open project filters
           </button>
@@ -441,17 +486,36 @@ export default function VolunteerDashboardPage() {
             <button
               type="button"
               onClick={() => setShowContributionModal(true)}
-              className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
+              className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
             >
               Log Hours
             </button>
           </div>
           <div className="space-y-3">
             {contributions.length === 0 ? (
-              <p className="text-sm text-slate-600">No contributions logged yet.</p>
+              <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
+                <p className="text-base font-semibold text-slate-800">No contributions yet</p>
+                <p className="mt-1 text-sm text-slate-600">
+                  Start with one active project and track your hours to build impact visibility.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveSection("discover");
+                    setActiveTab("projects");
+                    router.replace("/volunteer-dashboard?section=discover", { scroll: false });
+                  }}
+                  className="mt-3 rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
+                >
+                  Find a project
+                </button>
+              </div>
             ) : (
               contributions.map((item, index) => (
-                <article key={`${item.projectId}-${index}`} className="rounded-2xl border border-slate-200 p-4">
+                <article
+                  key={`${item.projectId}-${index}`}
+                  className="rounded-2xl border border-slate-200 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-sm"
+                >
                   <p className="text-sm font-semibold">{item.projectTitle}</p>
                   <p className="text-sm text-slate-600">{item.hours}h • {item.notes}</p>
                   <p className="mt-1 text-xs text-slate-500">
@@ -470,12 +534,19 @@ export default function VolunteerDashboardPage() {
         <SectionCard title="Messages">
           <div className="mb-4 grid gap-3 md:grid-cols-2">
             <div className="rounded-2xl border border-slate-200 p-4">
-              <p className="mb-2 text-sm font-semibold">Conversation Threads</p>
+              <p className="mb-2 flex items-center gap-2 text-sm font-semibold">
+                <MessageCircle className="h-4 w-4 text-cyan-600" /> Conversation Threads
+              </p>
               {threads.length === 0 ? (
-                <p className="text-sm text-slate-600">No active conversations.</p>
+                <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-600">
+                  No active conversations yet. Reach out to a project lead to align on tasks.
+                </div>
               ) : (
                 threads.map((thread) => (
-                  <div key={String(thread.id)} className="mb-2 rounded-xl bg-slate-50 p-2 text-xs">
+                  <div
+                    key={String(thread.id)}
+                    className="mb-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs transition-all duration-200 hover:border-slate-300 hover:bg-white"
+                  >
                     <p className="font-semibold">Thread {String(thread.id)}</p>
                     <p className="text-slate-600">{String(thread.lastMessage || "No messages yet")}</p>
                   </div>
@@ -497,7 +568,10 @@ export default function VolunteerDashboardPage() {
                 rows={4}
                 placeholder="Write your message"
               />
-              <button type="submit" className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">
+              <button
+                type="submit"
+                className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
+              >
                 Send
               </button>
             </form>
@@ -511,19 +585,31 @@ export default function VolunteerDashboardPage() {
         <SectionCard title="Opportunities">
           <p className="mb-3 text-sm text-slate-600">Rules-based recommendations matched by your interests and skills.</p>
           <div className="space-y-3">
-            {recommendations.map((project) => (
-              <article key={String(project.id)} className="rounded-2xl border border-slate-200 p-4">
-                <h3 className="font-semibold">{project.title}</h3>
-                <p className="text-sm text-slate-600">{project.category} • {project.location}</p>
-                <button
-                  type="button"
-                  onClick={() => void onJoinProject(String(project.id))}
-                  className="mt-2 rounded-xl bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white"
+            {recommendations.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
+                <p className="text-base font-semibold text-slate-800">No recommendations yet</p>
+                <p className="mt-1 text-sm text-slate-600">
+                  Add more skills and interests to unlock personalized opportunities.
+                </p>
+              </div>
+            ) : (
+              recommendations.map((project) => (
+                <article
+                  key={String(project.id)}
+                  className="rounded-2xl border border-slate-200 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-sm"
                 >
-                  Join Opportunity
-                </button>
-              </article>
-            ))}
+                  <h3 className="font-semibold">{project.title}</h3>
+                  <p className="text-sm text-slate-600">{project.category} • {project.location}</p>
+                  <button
+                    type="button"
+                    onClick={() => void onJoinProject(String(project.id))}
+                    className="mt-2 rounded-xl bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
+                  >
+                    Join Opportunity
+                  </button>
+                </article>
+              ))
+            )}
           </div>
         </SectionCard>
       );
@@ -534,16 +620,29 @@ export default function VolunteerDashboardPage() {
         <SectionCard title="Events">
           <div className="space-y-3">
             {events.length === 0 ? (
-              <p className="text-sm text-slate-600">No upcoming events yet.</p>
+              <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
+                <p className="text-base font-semibold text-slate-800">No upcoming events yet</p>
+                <p className="mt-1 text-sm text-slate-600">
+                  Upcoming workshops, project meetings, and community events will show up here.
+                </p>
+              </div>
             ) : (
               events.map((event) => (
-                <article key={String(event.id)} className="rounded-2xl border border-slate-200 p-4">
+                <article
+                  key={String(event.id)}
+                  className="rounded-2xl border border-slate-200 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-sm"
+                >
                   <h3 className="font-semibold">{event.title}</h3>
-                  <p className="text-sm text-slate-600">{event.location} • {event.startsAt}</p>
+                  <p className="flex items-center gap-1 text-sm text-slate-600">
+                    <CalendarClock className="h-3.5 w-3.5 text-cyan-600" /> {event.startsAt}
+                  </p>
+                  <p className="mt-0.5 flex items-center gap-1 text-sm text-slate-600">
+                    <MapPin className="h-3.5 w-3.5 text-cyan-600" /> {event.location}
+                  </p>
                   <button
                     type="button"
                     onClick={() => void onRsvpEvent(String(event.id))}
-                    className="mt-2 rounded-xl border border-slate-300 px-3 py-1.5 text-xs font-semibold"
+                    className="mt-2 rounded-xl border border-slate-300 px-3 py-1.5 text-xs font-semibold transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
                   >
                     RSVP
                   </button>
@@ -558,23 +657,38 @@ export default function VolunteerDashboardPage() {
     if (activeSection === "reports") {
       return (
         <SectionCard title="Impact Reports">
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-2xl border border-slate-200 p-4">
+          <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-2xl border border-slate-200 p-4 transition-all duration-200 hover:border-slate-300 hover:shadow-sm">
               <p className="text-xs uppercase text-slate-500">Hours contributed</p>
               <p className="mt-1 text-2xl font-black">{profile.hoursContributed}h</p>
             </div>
-            <div className="rounded-2xl border border-slate-200 p-4">
+            <div className="rounded-2xl border border-slate-200 p-4 transition-all duration-200 hover:border-slate-300 hover:shadow-sm">
               <p className="text-xs uppercase text-slate-500">Completed projects</p>
               <p className="mt-1 text-2xl font-black">{profile.completedProjects}</p>
             </div>
-            <div className="rounded-2xl border border-slate-200 p-4">
+            <div className="rounded-2xl border border-slate-200 p-4 transition-all duration-200 hover:border-slate-300 hover:shadow-sm">
               <p className="text-xs uppercase text-slate-500">Impact score</p>
               <p className="mt-1 text-2xl font-black">{profile.impactScore}</p>
             </div>
-            <div className="rounded-2xl border border-slate-200 p-4">
+            <div className="rounded-2xl border border-slate-200 p-4 transition-all duration-200 hover:border-slate-300 hover:shadow-sm">
               <p className="text-xs uppercase text-slate-500">Badges earned</p>
               <p className="mt-1 text-2xl font-black">{(profile.badgesEarned || []).length}</p>
             </div>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <div className="mb-2 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-slate-600">
+              <span>Impact progress</span>
+              <span>{Math.min(100, profile.impactScore)}%</span>
+            </div>
+            <div className="h-2 rounded-full bg-slate-200">
+              <div
+                className="h-2 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 transition-all duration-500"
+                style={{ width: `${Math.min(100, profile.impactScore)}%` }}
+              />
+            </div>
+            <p className="mt-2 text-sm text-slate-600">
+              Every contribution strengthens your impact profile across community initiatives.
+            </p>
           </div>
         </SectionCard>
       );
@@ -585,17 +699,25 @@ export default function VolunteerDashboardPage() {
       return (
         <SectionCard title="Saved Projects">
           {saved.length === 0 ? (
-            <p className="text-sm text-slate-600">No saved opportunities yet.</p>
+            <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
+              <p className="text-base font-semibold text-slate-800">No saved opportunities yet</p>
+              <p className="mt-1 text-sm text-slate-600">
+                Save projects to revisit them quickly and decide where to contribute next.
+              </p>
+            </div>
           ) : (
             <div className="space-y-3">
               {saved.map((project) => (
-                <article key={String(project.id)} className="rounded-2xl border border-slate-200 p-4">
+                <article
+                  key={String(project.id)}
+                  className="rounded-2xl border border-slate-200 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-sm"
+                >
                   <h3 className="font-semibold">{project.title}</h3>
                   <p className="text-sm text-slate-600">{project.category} • {project.location}</p>
                   <button
                     type="button"
                     onClick={() => void onSaveProject(String(project.id))}
-                    className="mt-2 rounded-xl border border-slate-300 px-3 py-1.5 text-xs font-semibold"
+                    className="mt-2 rounded-xl border border-slate-300 px-3 py-1.5 text-xs font-semibold transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
                   >
                     Remove from saved
                   </button>
@@ -717,7 +839,7 @@ export default function VolunteerDashboardPage() {
             <button
               type="button"
               onClick={() => setShowContributionModal(true)}
-              className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold"
+              className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-100"
             >
               <CheckCircle2 className="h-3.5 w-3.5" /> Log activity
             </button>
@@ -754,10 +876,18 @@ export default function VolunteerDashboardPage() {
           <SectionCard title="Notifications">
             <div className="space-y-2">
               {notifications.length === 0 ? (
-                <p className="text-sm text-slate-600">No notifications yet.</p>
+                <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
+                  <p className="text-base font-semibold text-slate-800">No notifications yet</p>
+                  <p className="mt-1 text-sm text-slate-600">
+                    Project updates, milestone alerts, and team messages will appear here.
+                  </p>
+                </div>
               ) : (
                 notifications.map((n) => (
-                  <div key={n.id} className="flex items-center justify-between rounded-xl border border-slate-200 p-3">
+                  <div
+                    key={n.id}
+                    className="flex items-center justify-between rounded-xl border border-slate-200 p-3 transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-sm"
+                  >
                     <div>
                       <p className="text-sm font-semibold">{n.title}</p>
                       <p className="text-xs text-slate-600">{n.body}</p>
@@ -766,7 +896,7 @@ export default function VolunteerDashboardPage() {
                       <button
                         type="button"
                         onClick={() => void onMarkNotificationRead(n.id)}
-                        className="rounded-lg border border-slate-300 px-2 py-1 text-xs"
+                        className="rounded-lg border border-slate-300 px-2 py-1 text-xs transition-all duration-200 hover:bg-slate-100"
                       >
                         Mark read
                       </button>
