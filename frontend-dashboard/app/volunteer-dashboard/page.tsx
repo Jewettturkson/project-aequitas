@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, CheckCircle2, Loader2 } from "lucide-react";
+import { Bell, CheckCircle2, Loader2, LogOut } from "lucide-react";
 import FloatingActions from "./components/FloatingActions";
 import HeroSection from "./components/HeroSection";
 import Sidebar from "./components/Sidebar";
@@ -98,6 +98,7 @@ export default function VolunteerDashboardPage() {
     onUpdatePrefs,
     onRsvpEvent,
     onMarkNotificationRead,
+    onSignOut,
   } = useVolunteerDashboard();
 
   const [activeTab, setActiveTab] = useState<DashboardTab>("overview");
@@ -719,6 +720,13 @@ export default function VolunteerDashboardPage() {
               className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold"
             >
               <CheckCircle2 className="h-3.5 w-3.5" /> Log activity
+            </button>
+            <button
+              type="button"
+              onClick={() => void onSignOut()}
+              className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
+            >
+              <LogOut className="h-3.5 w-3.5" /> Sign out
             </button>
           </div>
 

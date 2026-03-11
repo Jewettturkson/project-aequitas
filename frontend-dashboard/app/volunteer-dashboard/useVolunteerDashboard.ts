@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { auth, firebaseReady } from '../../lib/firebase';
+import { signOut } from 'firebase/auth';
 import {
   evaluateAndAwardBadges,
   getSavedProjectIds,
@@ -321,6 +322,20 @@ export function useVolunteerDashboard() {
     [wrapAction]
   );
 
+  const onSignOut = useCallback(async () => {
+    if (!auth) return;
+    setIsBusy(true);
+    setError('');
+    setNotice('');
+    try {
+      await signOut(auth);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to sign out.');
+    } finally {
+      setIsBusy(false);
+    }
+  }, []);
+
   const totalHours = useMemo(
     () => contributions.reduce((sum, row) => sum + Number(row.hours || 0), 0),
     [contributions]
@@ -362,5 +377,6 @@ export function useVolunteerDashboard() {
     onUpdatePrefs,
     onRsvpEvent,
     onMarkNotificationRead,
+    onSignOut,
   };
 }
