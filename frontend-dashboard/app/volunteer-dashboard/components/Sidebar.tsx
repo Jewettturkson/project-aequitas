@@ -11,6 +11,7 @@ import {
   UserRoundCheck,
   X,
 } from "lucide-react";
+import BrandLogo from "../../components/BrandLogo";
 import type { NavItem } from "../types";
 
 type SidebarProps = {
@@ -64,8 +65,9 @@ export default function Sidebar({
       >
         <div className="flex h-full flex-col p-5">
           <div className="mb-6 rounded-2xl border border-white/10 bg-white/5 p-4">
-            <p className="text-2xl font-black tracking-tight">TurkNode</p>
-            <p className="mt-1 text-xs text-slate-300">by ENTURK</p>
+            <div className="mx-auto h-[74px] w-full max-w-[220px]">
+              <BrandLogo variant="auto" className="h-full w-full" priority />
+            </div>
           </div>
 
           <div className="mb-5 rounded-2xl border border-white/10 bg-white/10 p-4">

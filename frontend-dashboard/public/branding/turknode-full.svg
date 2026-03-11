@@ -1,0 +1,24 @@
+<svg width="1280" height="720" viewBox="0 0 1280 720" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">TurkNode full logo</title>
+  <desc id="desc">TurkNode logo with wordmark and tagline</desc>
+  <defs>
+    <linearGradient id="strokeGradient" x1="265" y1="50" x2="1015" y2="375" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#12213C"/>
+      <stop offset="1" stop-color="#0A1732"/>
+    </linearGradient>
+    <linearGradient id="accentGradient" x1="0" y1="0" x2="108" y2="108" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#60A5FA"/>
+      <stop offset="1" stop-color="#3B82F6"/>
+    </linearGradient>
+  </defs>
+  <path d="M615 168C568 118 510 90 438 90C289 90 182 200 182 287C182 374 289 484 438 484C510 484 568 456 615 406" stroke="url(#strokeGradient)" stroke-width="44" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M691 168C738 118 796 90 868 90C1017 90 1124 200 1124 287C1124 374 1017 484 868 484C796 484 738 456 691 406" stroke="url(#strokeGradient)" stroke-width="44" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M492 176L774 398" stroke="url(#strokeGradient)" stroke-width="44" stroke-linecap="round"/>
+  <rect x="636" y="233" width="108" height="48" rx="24" transform="rotate(40 636 233)" fill="url(#accentGradient)"/>
+  <text x="640" y="585" text-anchor="middle" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="108" font-weight="800" letter-spacing="8" fill="#0B1A37">
+    TURKNODE
+  </text>
+  <text x="640" y="652" text-anchor="middle" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="42" font-weight="600" letter-spacing="10" fill="#0B1A37">
+    CONNECT • EMPOWER • TRANSFORM
+  </text>
+</svg>

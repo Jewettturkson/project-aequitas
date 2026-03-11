@@ -20,6 +20,7 @@ import OpenProjectIntakePanel, {
   type ProjectPreview,
   type ProjectStatus,
 } from "./components/OpenProjectIntakePanel";
+import BrandLogo from "./components/BrandLogo";
 
 type MatchVolunteer = {
   volunteer_id: string;
@@ -1130,7 +1131,9 @@ export default function Page() {
         </div>
 
         <header className="relative z-10 mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-6">
-          <div className="text-4xl font-black tracking-tight">TurkNode</div>
+          <div className="h-14 w-[220px]">
+            <BrandLogo variant="auto" className="h-full w-full" priority />
+          </div>
           <div className="hidden items-center gap-2 md:flex" aria-label="Landing navigation">
             {[
               { id: "mission", label: "Mission" },
@@ -1489,7 +1492,9 @@ export default function Page() {
     <main className="min-h-screen bg-white text-[#0b2e59]">
       <header className="border-b border-[#0b2e59] bg-[#0b2e59] text-white">
         <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-4 px-6 py-5">
-          <div className="text-4xl font-black tracking-tight">TurkNode</div>
+          <div className="h-12 w-[200px]">
+            <BrandLogo variant="full" className="h-full w-full" />
+          </div>
           <div className="flex flex-wrap items-center gap-2">
             <div
               className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-sm font-semibold ${statusClasses} bg-opacity-100`}
