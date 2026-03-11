@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Briefcase,
@@ -86,6 +86,7 @@ type EmailAuthState = {
 };
 
 type DashboardView = "volunteer" | "manager";
+type LandingSection = "mission" | "projects" | "impact" | "join";
 
 const ORCHESTRATOR_URL =
   process.env.NEXT_PUBLIC_ORCHESTRATOR_URL || "http://localhost:3000";
@@ -234,6 +235,9 @@ export default function Page() {
   const [feedbackBusyVolunteerId, setFeedbackBusyVolunteerId] = useState<string | null>(null);
   const [dashboardView, setDashboardView] = useState<DashboardView>("volunteer");
   const [isRoutingVolunteer, setIsRoutingVolunteer] = useState(false);
+  const [activeLandingSection, setActiveLandingSection] =
+    useState<LandingSection>("mission");
+  const authCardRef = useRef<HTMLDivElement | null>(null);
 
   const showToast = (tone: ToastState["tone"], message: string) => {
     setToast({ tone, message });
@@ -436,6 +440,52 @@ export default function Page() {
     const timer = setTimeout(() => setToast(null), 3500);
     return () => clearTimeout(timer);
   }, [toast]);
+
+  useEffect(() => {
+    if (sessionUser) return;
+
+    const sectionIds: LandingSection[] = ["mission", "projects", "impact", "join"];
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+        if (visible?.target?.id) {
+          setActiveLandingSection(visible.target.id as LandingSection);
+        }
+      },
+      {
+        rootMargin: "-35% 0px -45% 0px",
+        threshold: [0.2, 0.5, 0.8],
+      }
+    );
+
+    sectionIds.forEach((id) => {
+      const node = document.getElementById(id);
+      if (node) observer.observe(node);
+    });
+
+    return () => observer.disconnect();
+  }, [sessionUser]);
+
+  const scrollToLandingSection = (section: LandingSection) => {
+    const node = document.getElementById(section);
+    if (!node) return;
+    node.scrollIntoView({ behavior: "smooth", block: "start" });
+    setActiveLandingSection(section);
+  };
+
+  const startJoinFlow = (role: "volunteer" | "lead" | "partner") => {
+    setShowEmailSignIn(true);
+    if (role === "lead") {
+      showToast("success", "Project lead onboarding starts with account creation.");
+    } else if (role === "partner") {
+      showToast("success", "Organization partnership inquiry flow is ready after sign-in.");
+    } else {
+      showToast("success", "Volunteer signup starts with account creation.");
+    }
+    authCardRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
 
   useEffect(() => {
     if (sessionUser?.hasManagerAccess) {
@@ -1027,15 +1077,30 @@ export default function Page() {
 
         <header className="relative z-10 mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-6">
           <div className="text-4xl font-black tracking-tight">TurkNode</div>
-          <div className="hidden items-center gap-2 md:flex">
-            {["Mission", "Projects", "Impact", "Join"].map((item) => (
-              <span
-                key={item}
-                className="rounded-full border border-white/20 bg-white/5 px-3 py-1 text-xs font-semibold text-white/80"
-              >
-                {item}
-              </span>
-            ))}
+          <div className="hidden items-center gap-2 md:flex" aria-label="Landing navigation">
+            {[
+              { id: "mission", label: "Mission" },
+              { id: "projects", label: "Projects" },
+              { id: "impact", label: "Impact" },
+              { id: "join", label: "Join" },
+            ].map((item) => {
+              const active = activeLandingSection === item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => scrollToLandingSection(item.id as LandingSection)}
+                  className={`rounded-full border px-3 py-1 text-xs font-semibold transition focus:outline-none focus:ring-2 focus:ring-cyan-300 ${
+                    active
+                      ? "border-cyan-300/70 bg-cyan-400/20 text-cyan-100"
+                      : "border-white/20 bg-white/5 text-white/80 hover:bg-white/10"
+                  }`}
+                  aria-label={`Go to ${item.label} section`}
+                >
+                  {item.label}
+                </button>
+              );
+            })}
           </div>
         </header>
 
@@ -1066,7 +1131,10 @@ export default function Page() {
             </div>
           </div>
 
-          <div className="rounded-3xl border border-white/15 bg-white/95 p-6 text-[#13161a] shadow-2xl shadow-blue-900/40 backdrop-blur md:p-7">
+          <div
+            ref={authCardRef}
+            className="rounded-3xl border border-white/15 bg-white/95 p-6 text-[#13161a] shadow-2xl shadow-blue-900/40 backdrop-blur md:p-7"
+          >
             <h2 className="text-3xl font-black tracking-tight text-[#0b1a37]">Welcome back</h2>
             <p className="mt-2 text-sm text-slate-600">Sign in to continue your volunteer journey.</p>
 
@@ -1124,6 +1192,12 @@ export default function Page() {
               </button>
             </form>
 
+            {showEmailSignIn ? (
+              <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-cyan-700">
+                Email sign-in enabled for role onboarding.
+              </p>
+            ) : null}
+
             {authStatus === "unavailable" ? (
               <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
                 Firebase auth is unavailable. Check frontend auth environment settings.
@@ -1134,6 +1208,184 @@ export default function Page() {
                 {authActionError}
               </p>
             ) : null}
+          </div>
+        </section>
+
+        <section id="mission" className="relative z-10 mx-auto w-full max-w-7xl scroll-mt-20 px-6 py-14">
+          <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-7 md:p-10">
+            <h2 className="text-3xl font-black tracking-tight md:text-4xl">Our Mission</h2>
+            <p className="mt-3 max-w-3xl text-lg text-slate-300">
+              Empowering communities through technology, volunteerism, and measurable impact.
+            </p>
+            <p className="mt-4 max-w-4xl text-sm leading-7 text-slate-300">
+              TurkNode is a community platform designed to connect skilled volunteers with meaningful projects in sustainability, education, and civic innovation. We believe real change happens when people collaborate locally with the right tools, shared effort, and measurable outcomes.
+            </p>
+            <div className="mt-7 grid gap-4 md:grid-cols-3">
+              {[
+                {
+                  title: "Community",
+                  body: "We connect volunteers, organizations, and innovators working toward shared goals.",
+                },
+                {
+                  title: "Technology",
+                  body: "We use modern tools to organize initiatives, coordinate contributions, and scale local action.",
+                },
+                {
+                  title: "Impact",
+                  body: "Every project on TurkNode is designed to create measurable results for real communities.",
+                },
+              ].map((pillar) => (
+                <article
+                  key={pillar.title}
+                  className="rounded-2xl border border-white/10 bg-white/[0.05] p-5 transition hover:bg-white/[0.08]"
+                >
+                  <h3 className="text-xl font-bold">{pillar.title}</h3>
+                  <p className="mt-2 text-sm leading-6 text-slate-300">{pillar.body}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section id="projects" className="relative z-10 mx-auto w-full max-w-7xl scroll-mt-20 px-6 py-14">
+          <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-7 md:p-10">
+            <h2 className="text-3xl font-black tracking-tight md:text-4xl">Community Projects</h2>
+            <p className="mt-3 max-w-3xl text-base text-slate-300">
+              Explore initiatives led by volunteers and organizations focused on education, sustainability, and local impact.
+            </p>
+            <div className="mt-7 grid gap-4 lg:grid-cols-3">
+              {[
+                {
+                  title: "Urban Tree Stewardship",
+                  description:
+                    "Help restore urban green spaces through community tree planting and environmental stewardship.",
+                  category: "Environment",
+                  impact: "340 trees planted",
+                  volunteers: "24 volunteers",
+                },
+                {
+                  title: "Neighborhood Learning Pods",
+                  description:
+                    "Support students through tutoring and mentorship programs led by volunteer educators.",
+                  category: "Education",
+                  impact: "120 students supported",
+                  volunteers: "18 volunteers",
+                },
+                {
+                  title: "Digital Access Initiative",
+                  description:
+                    "Provide technical assistance and digital literacy training for underserved communities.",
+                  category: "Technology",
+                  impact: "75 households reached",
+                  volunteers: "12 volunteers",
+                },
+              ].map((project) => (
+                <article
+                  key={project.title}
+                  className="rounded-2xl border border-white/10 bg-white/[0.05] p-5 transition hover:-translate-y-0.5 hover:bg-white/[0.08]"
+                >
+                  <span className="inline-flex rounded-full border border-cyan-300/40 bg-cyan-400/15 px-2.5 py-1 text-xs font-semibold text-cyan-100">
+                    {project.category}
+                  </span>
+                  <h3 className="mt-3 text-xl font-bold">{project.title}</h3>
+                  <p className="mt-2 text-sm leading-6 text-slate-300">{project.description}</p>
+                  <div className="mt-4 grid grid-cols-2 gap-3 text-xs text-slate-300">
+                    <div>
+                      <p className="font-semibold text-slate-200">Impact</p>
+                      <p>{project.impact}</p>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-slate-200">Team</p>
+                      <p>{project.volunteers}</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="mt-5 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold transition hover:bg-white/20"
+                  >
+                    View Project
+                  </button>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section id="impact" className="relative z-10 mx-auto w-full max-w-7xl scroll-mt-20 px-6 py-14">
+          <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-7 md:p-10">
+            <h2 className="text-3xl font-black tracking-tight md:text-4xl">Community Impact</h2>
+            <p className="mt-3 max-w-3xl text-base text-slate-300">
+              TurkNode tracks real outcomes generated by volunteers and projects across communities.
+            </p>
+            <div className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {[
+                "250+ Volunteer Hours",
+                "40 Active Initiatives",
+                "1,200 Lives Supported",
+                "340 Trees Planted",
+                "120 Students Supported",
+                "75 Community Workshops Hosted",
+              ].map((metric) => (
+                <div
+                  key={metric}
+                  className="rounded-2xl border border-white/10 bg-white/[0.05] p-5"
+                >
+                  <p className="text-lg font-bold text-white">{metric}</p>
+                </div>
+              ))}
+            </div>
+            <p className="mt-6 max-w-4xl text-sm leading-7 text-slate-300">
+              Every hour contributed, every initiative launched, and every project completed helps strengthen communities and expand local opportunity.
+            </p>
+          </div>
+        </section>
+
+        <section id="join" className="relative z-10 mx-auto w-full max-w-7xl scroll-mt-20 px-6 pb-6 pt-14">
+          <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-7 md:p-10">
+            <h2 className="text-3xl font-black tracking-tight md:text-4xl">Join TurkNode</h2>
+            <p className="mt-3 max-w-3xl text-base text-slate-300">
+              Be part of a growing network working to build stronger communities.
+            </p>
+            <div className="mt-7 grid gap-4 lg:grid-cols-3">
+              {[
+                {
+                  title: "Join as a Volunteer",
+                  description:
+                    "Contribute your skills, support meaningful projects, and collaborate with others making a difference.",
+                  cta: "Become a Volunteer",
+                  role: "volunteer" as const,
+                },
+                {
+                  title: "Join as a Project Lead",
+                  description:
+                    "Launch an initiative, recruit volunteers, and manage community-driven impact.",
+                  cta: "Create a Project",
+                  role: "lead" as const,
+                },
+                {
+                  title: "Partner as an Organization",
+                  description:
+                    "Work with TurkNode to run initiatives and connect with skilled volunteers.",
+                  cta: "Partner with Us",
+                  role: "partner" as const,
+                },
+              ].map((card) => (
+                <article
+                  key={card.title}
+                  className="rounded-2xl border border-white/10 bg-white/[0.05] p-5 transition hover:bg-white/[0.08]"
+                >
+                  <h3 className="text-xl font-bold">{card.title}</h3>
+                  <p className="mt-2 text-sm leading-6 text-slate-300">{card.description}</p>
+                  <button
+                    type="button"
+                    onClick={() => startJoinFlow(card.role)}
+                    className="mt-5 rounded-xl bg-white px-4 py-2 text-sm font-semibold text-[#0b1a37] transition hover:bg-slate-200"
+                  >
+                    {card.cta}
+                  </button>
+                </article>
+              ))}
+            </div>
           </div>
         </section>
 
