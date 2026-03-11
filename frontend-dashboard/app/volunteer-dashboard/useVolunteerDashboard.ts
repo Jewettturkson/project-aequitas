@@ -61,24 +61,32 @@ export function useVolunteerDashboard() {
   const [filterSkill, setFilterSkill] = useState('');
 
   const refreshAll = useCallback(async (currentUid: string) => {
-    const [profileRow, projectsRows, contributionRows, notificationRows, threadRows, eventRows, savedRows] =
-      await Promise.all([
-        getUserProfile(currentUid),
-        listProjects(),
-        listContributions(currentUid),
-        listNotifications(currentUid),
-        listThreads(currentUid),
-        listEvents(),
-        getSavedProjectIds(currentUid),
-      ]);
+    try {
+      const [profileRow, projectsRows, contributionRows, notificationRows, threadRows, eventRows, savedRows] =
+        await Promise.all([
+          getUserProfile(currentUid),
+          listProjects(),
+          listContributions(currentUid),
+          listNotifications(currentUid),
+          listThreads(currentUid),
+          listEvents(),
+          getSavedProjectIds(currentUid),
+        ]);
 
-    setProfile(profileRow);
-    setProjects(projectsRows);
-    setContributions(contributionRows);
-    setNotifications(notificationRows);
-    setThreads(threadRows);
-    setEvents(eventRows);
-    setSavedProjectIds(savedRows);
+      if (profileRow) {
+        setProfile(profileRow);
+      }
+      setProjects(projectsRows);
+      setContributions(contributionRows);
+      setNotifications(notificationRows);
+      setThreads(threadRows);
+      setEvents(eventRows);
+      setSavedProjectIds(savedRows);
+      return true;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to refresh dashboard data.');
+      return false;
+    }
   }, []);
 
   useEffect(() => {
@@ -98,7 +106,31 @@ export function useVolunteerDashboard() {
       try {
         setUid(user.uid);
         await seedIfEmpty(user.uid, user.email || '', user.displayName || 'TurkNode Volunteer');
-        await refreshAll(user.uid);
+        const refreshed = await refreshAll(user.uid);
+        if (!refreshed) {
+          setProfile({
+            uid: user.uid,
+            email: user.email || '',
+            displayName: user.displayName || 'TurkNode Volunteer',
+            role: 'volunteer',
+            bio: 'Volunteer profile is initializing. Please refresh shortly.',
+            location: '',
+            interests: [],
+            skills: [],
+            availableForProjects: true,
+            hoursContributed: 0,
+            completedProjects: 0,
+            impactScore: 0,
+            badgesEarned: [],
+            notificationPrefs: {
+              projectInvites: true,
+              milestones: true,
+              badges: true,
+              messages: true,
+            },
+            profileCompletion: 20,
+          });
+        }
         setAuthStatus('ready');
       } catch (err) {
         setProfile({
@@ -134,7 +166,9 @@ export function useVolunteerDashboard() {
   useEffect(() => {
     if (!uid) return;
     const timer = setInterval(() => {
-      void refreshAll(uid);
+      void refreshAll(uid).catch(() => {
+        // Prevent uncaught promise rejections from crashing the route.
+      });
     }, 15000);
     return () => clearInterval(timer);
   }, [uid, refreshAll]);
