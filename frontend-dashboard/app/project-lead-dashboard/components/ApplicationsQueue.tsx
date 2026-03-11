@@ -3,9 +3,11 @@ import type { ApplicationRow } from '../types';
 export default function ApplicationsQueue({
   applications,
   onStateChange,
+  onMessage,
 }: {
   applications: ApplicationRow[];
   onStateChange: (id: string, state: ApplicationRow['state']) => void;
+  onMessage?: (id: string) => void;
 }) {
   return (
     <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -29,7 +31,13 @@ export default function ApplicationsQueue({
                 <button onClick={() => onStateChange(item.id, 'accepted')} className="rounded-lg bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-emerald-700">Accept</button>
                 <button onClick={() => onStateChange(item.id, 'rejected')} className="rounded-lg bg-rose-600 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-rose-700">Reject</button>
                 <button onClick={() => onStateChange(item.id, 'saved')} className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-50">Save for later</button>
-                <button className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-50">Message</button>
+                <button
+                  type="button"
+                  onClick={() => onMessage?.(item.id)}
+                  className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  Message
+                </button>
               </div>
             </article>
           ))

@@ -7,11 +7,21 @@ import { auth, firebaseReady } from "../../lib/firebase";
 import { signOut } from "firebase/auth";
 import {
   createProject,
+  listApplicationsForLead,
+  listEvents,
+  listTasksForLead,
+  listThreads,
+  listVolunteers,
   getUserProfile,
   listProjects,
   seedIfEmpty,
+  updateApplicationState,
+  updateTaskStatus,
   upsertUserProfile,
+  type ApplicationDoc,
+  type EventDoc,
   type ProjectDoc,
+  type TaskDoc,
   type UserProfileDoc,
 } from "../../lib/turknodeDb";
 import ActiveProjectsModule from "./components/ActiveProjectsModule";
@@ -26,8 +36,7 @@ import MessagesPanel from "./components/MessagesPanel";
 import QuickActions from "./components/QuickActions";
 import TaskTracker from "./components/TaskTracker";
 import VolunteersModule from "./components/VolunteersModule";
-import { applicationsMock, eventsMock, messagesMock, tasksMock, volunteersMock } from "./mockData";
-import type { ApplicationRow, ManagerSection, ManagerTab, TaskRow } from "./types";
+import type { ApplicationRow, ManagerSection, ManagerTab, MessageThread, TaskRow, VolunteerRow } from "./types";
 
 type FormState = {
   title: string;
@@ -51,6 +60,47 @@ const initialForm: FormState = {
   impactMetric: "",
 };
 
+function mapApplication(doc: ApplicationDoc): ApplicationRow {
+  return {
+    id: doc.id,
+    name: doc.applicantName,
+    project: doc.projectTitle,
+    skillsMatch: doc.skillsMatch || 0,
+    availability: doc.availability || "Not specified",
+    message: doc.message || "No message included.",
+    appliedAt: doc.createdAt ? new Date(doc.createdAt).toLocaleDateString() : "Recently",
+    state: doc.state || "pending",
+  };
+}
+
+function mapTask(doc: TaskDoc): TaskRow {
+  return {
+    id: doc.id,
+    title: doc.title,
+    volunteer: doc.assignedVolunteerName || "Unassigned",
+    project: doc.projectTitle || "General",
+    dueDate: doc.dueDate,
+    priority: doc.priority || "medium",
+    status: doc.status || "todo",
+  };
+}
+
+function mapVolunteer(row: UserProfileDoc): VolunteerRow {
+  const isAssigned = (row.completedProjects || 0) > 0 || (row.hoursContributed || 0) > 0;
+  return {
+    id: row.uid,
+    name: row.displayName || "Volunteer",
+    skills: row.skills || [],
+    assignment: isAssigned ? "Active assignment" : "Unassigned",
+    hours: row.hoursContributed || 0,
+    status: row.availableForProjects
+      ? isAssigned
+        ? "assigned"
+        : "needs-assignment"
+      : "available",
+  };
+}
+
 export default function ProjectLeadDashboardPage() {
   const router = useRouter();
   const formRef = useRef<HTMLDivElement | null>(null);
@@ -65,16 +115,50 @@ export default function ProjectLeadDashboardPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeSection, setActiveSection] = useState<ManagerSection>("dashboard");
   const [tab, setTab] = useState<ManagerTab>("overview");
-  const [applications, setApplications] = useState<ApplicationRow[]>(applicationsMock);
-  const [tasks, setTasks] = useState<TaskRow[]>(tasksMock);
+  const [applications, setApplications] = useState<ApplicationRow[]>([]);
+  const [tasks, setTasks] = useState<TaskRow[]>([]);
+  const [volunteers, setVolunteers] = useState<VolunteerRow[]>([]);
+  const [threads, setThreads] = useState<MessageThread[]>([]);
+  const [events, setEvents] = useState<EventDoc[]>([]);
 
   const refresh = async (currentUid: string) => {
-    const [profileRow, projectsRows] = await Promise.all([
+    const [profileRow, projectsRows, volunteerRows, threadRows, eventRows] = await Promise.all([
       getUserProfile(currentUid),
       listProjects(),
+      listVolunteers(),
+      listThreads(currentUid),
+      listEvents(),
     ]);
     setProfile(profileRow);
     setProjects(projectsRows);
+    setVolunteers(volunteerRows.map(mapVolunteer));
+    setThreads(
+      threadRows.map((thread) => ({
+        id: String(thread.id),
+        title: Array.isArray(thread.members)
+          ? `Conversation (${(thread.members as string[]).length} members)`
+          : "Conversation",
+        preview: String(thread.lastMessage || "No messages yet."),
+        unread: 0,
+        updatedAt: thread.updatedAt
+          ? new Date(String(thread.updatedAt)).toLocaleString()
+          : "Recently",
+      }))
+    );
+    setEvents(eventRows);
+
+    const leadEmail = (profileRow?.email || "").trim();
+    if (leadEmail) {
+      const [applicationRows, taskRows] = await Promise.all([
+        listApplicationsForLead(leadEmail),
+        listTasksForLead(leadEmail),
+      ]);
+      setApplications(applicationRows.map(mapApplication));
+      setTasks(taskRows.map(mapTask));
+    } else {
+      setApplications([]);
+      setTasks([]);
+    }
   };
 
   useEffect(() => {
@@ -134,7 +218,7 @@ export default function ProjectLeadDashboardPage() {
         value: `${Math.max(0, activeProjects.reduce((sum, p) => sum + (3 - Math.min(3, p.participantCount || 0)), 0))}`,
       },
       { label: "Pending Applications", value: `${applications.filter((a) => a.state === "pending").length}` },
-      { label: "Upcoming Events", value: `${eventsMock.length}` },
+      { label: "Upcoming Events", value: `${events.length}` },
       {
         label: "Tasks Due This Week",
         value: `${tasks.filter((t) => t.status !== "done").length}`,
@@ -145,7 +229,7 @@ export default function ProjectLeadDashboardPage() {
         tone: "good" as const,
       },
     ],
-    [activeProjects, applications, eventsMock.length, profile?.impactScore, tasks]
+    [activeProjects, applications, events.length, profile?.impactScore, tasks]
   );
 
   const handleCreateProject = async (event: FormEvent<HTMLFormElement>) => {
@@ -195,14 +279,53 @@ export default function ProjectLeadDashboardPage() {
     }
   };
 
-  const handleApplicationState = (id: string, state: ApplicationRow["state"]) => {
-    setApplications((prev) => prev.map((row) => (row.id === id ? { ...row, state } : row)));
-    setNotice(`Application ${state}.`);
+  const handleApplicationState = async (id: string, state: ApplicationRow["state"]) => {
+    try {
+      setIsBusy(true);
+      setError("");
+      await updateApplicationState(id, state);
+      setApplications((prev) => prev.map((row) => (row.id === id ? { ...row, state } : row)));
+      setNotice(`Application ${state}.`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to update application state.");
+    } finally {
+      setIsBusy(false);
+    }
   };
 
-  const handleTaskState = (id: string, status: TaskRow["status"]) => {
-    setTasks((prev) => prev.map((task) => (task.id === id ? { ...task, status } : task)));
-    setNotice(`Task updated to ${status.replace("_", " ")}.`);
+  const handleTaskState = async (id: string, status: TaskRow["status"]) => {
+    try {
+      setIsBusy(true);
+      setError("");
+      await updateTaskStatus(id, status);
+      setTasks((prev) => prev.map((task) => (task.id === id ? { ...task, status } : task)));
+      setNotice(`Task updated to ${status.replace("_", " ")}.`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to update task status.");
+    } finally {
+      setIsBusy(false);
+    }
+  };
+
+  const handleProjectAction = (projectId: string, action: "view" | "edit" | "assign" | "tasks") => {
+    if (action === "tasks") {
+      setActiveSection("tasks");
+      setTab("projects");
+      setNotice("Showing project tasks for operational follow-up.");
+      return;
+    }
+    if (action === "assign") {
+      setActiveSection("volunteers");
+      setTab("volunteers");
+      setNotice("Open volunteer management to assign team members.");
+      return;
+    }
+    if (action === "edit") {
+      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      setNotice(`Editing flow ready for project ID: ${projectId}`);
+      return;
+    }
+    setNotice(`Viewing project details for ${projectId}`);
   };
 
   const showOverview = tab === "overview" && activeSection === "dashboard";
@@ -306,14 +429,20 @@ export default function ProjectLeadDashboardPage() {
 
           <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_300px]">
             <div className="space-y-5">
-              {(showOverview || tab === "projects" || activeSection === "projects") && <ActiveProjectsModule projects={activeProjects} />}
+              {(showOverview || tab === "projects" || activeSection === "projects") && (
+                <ActiveProjectsModule projects={activeProjects} onAction={handleProjectAction} />
+              )}
 
-              {(showOverview || tab === "volunteers" || activeSection === "volunteers") && (
+              {(showOverview || tab === "volunteers" || activeSection === "volunteers" || activeSection === "applications") && (
                 <div className="grid gap-5 xl:grid-cols-2">
-                  <VolunteersModule volunteers={volunteersMock} />
+                  <VolunteersModule volunteers={volunteers} />
                   <ApplicationsQueue
                     applications={applications.filter((item) => item.state === "pending" || item.state === "saved")}
                     onStateChange={handleApplicationState}
+                    onMessage={(applicationId) => {
+                      setActiveSection("messages");
+                      setNotice(`Message workspace opened for applicant ${applicationId}.`);
+                    }}
                   />
                 </div>
               )}
@@ -321,11 +450,20 @@ export default function ProjectLeadDashboardPage() {
               {(showOverview || tab === "projects" || activeSection === "tasks" || activeSection === "events") && (
                 <div className="grid gap-5 xl:grid-cols-2">
                   <TaskTracker tasks={tasks} onStatus={handleTaskState} />
-                  <EventsPanel events={eventsMock} />
+                  <EventsPanel
+                    events={events.map((event) => ({
+                      id: String(event.id),
+                      title: event.title,
+                      type: event.type || "community",
+                      when: new Date(event.startsAt).toLocaleString(),
+                      location: event.location,
+                      rsvpCount: (event.rsvps || []).length,
+                    }))}
+                  />
                 </div>
               )}
 
-              {(showOverview || activeSection === "messages") && <MessagesPanel threads={messagesMock} />}
+              {(showOverview || activeSection === "messages") && <MessagesPanel threads={threads} />}
 
               {(showOverview || tab === "analytics" || activeSection === "impact") && (
                 <ImpactAnalytics
@@ -334,6 +472,25 @@ export default function ProjectLeadDashboardPage() {
                   completed={profile.completedProjects}
                 />
               )}
+
+              {activeSection === "settings" ? (
+                <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                  <h3 className="text-xl font-black tracking-tight text-slate-900">Manager Settings</h3>
+                  <p className="mt-2 text-sm text-slate-600">
+                    Configure communication preferences, notification cadence, and partner reporting defaults.
+                  </p>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    <label className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2 text-sm">
+                      Application alerts
+                      <input type="checkbox" defaultChecked />
+                    </label>
+                    <label className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2 text-sm">
+                      Deadline reminders
+                      <input type="checkbox" defaultChecked />
+                    </label>
+                  </div>
+                </section>
+              ) : null}
             </div>
 
             <div className="space-y-5">

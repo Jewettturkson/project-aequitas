@@ -11,8 +11,10 @@ function calculateProgress(startDate: string, endDate: string) {
 
 export default function ActiveProjectsModule({
   projects,
+  onAction,
 }: {
   projects: ProjectDoc[];
+  onAction?: (projectId: string, action: 'view' | 'edit' | 'assign' | 'tasks') => void;
 }) {
   return (
     <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -68,9 +70,16 @@ export default function ActiveProjectsModule({
                 </div>
 
                 <div className="mt-3 flex flex-wrap gap-2">
-                  {['View Project', 'Edit', 'Assign Volunteers', 'View Tasks'].map((label) => (
+                  {[
+                    { label: 'View Project', action: 'view' as const },
+                    { label: 'Edit', action: 'edit' as const },
+                    { label: 'Assign Volunteers', action: 'assign' as const },
+                    { label: 'View Tasks', action: 'tasks' as const },
+                  ].map(({ label, action }) => (
                     <button
                       key={label}
+                      type="button"
+                      onClick={() => onAction?.(project.id, action)}
                       className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
                     >
                       {label}

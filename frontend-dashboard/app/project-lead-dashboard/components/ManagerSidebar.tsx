@@ -27,6 +27,7 @@ export default function ManagerSidebar({
     <aside className="rounded-3xl bg-[#06163a] p-4 text-white shadow-xl lg:sticky lg:top-6 lg:h-[calc(100vh-3rem)] lg:flex lg:flex-col">
       <div className="rounded-2xl border border-white/15 bg-white/5 px-4 py-5 text-4xl font-black tracking-tight">
         TurkNode
+        <p className="mt-1 text-xs font-medium tracking-normal text-blue-100/80">by ENTURK</p>
       </div>
       <div className="mt-4 rounded-2xl border border-white/15 bg-white/10 px-4 py-4">
         <p className="text-xl font-bold">{profileName}</p>

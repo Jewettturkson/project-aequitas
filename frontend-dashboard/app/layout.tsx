@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "TurkNode Dashboard",
-  description: "TurkNode volunteer impact dashboard",
+  title: "TurkNode by ENTURK",
+  description: "TurkNode is ENTURK's community impact platform for volunteers, project leads, and organizations.",
 };
 
 export default function RootLayout({

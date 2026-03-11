@@ -7,7 +7,7 @@ export type UserProfileDoc = {
   email: string;
   displayName: string;
   photoUrl?: string;
-  role: 'volunteer' | 'manager';
+  role: 'volunteer' | 'manager' | 'organization';
   bio: string;
   location: string;
   interests: string[];
@@ -40,6 +40,19 @@ export type ProjectDoc = {
   participants: string[];
   participantCount: number;
   projectLead: string;
+  organizationId?: string;
+  rolesOpen?: number;
+  pilotData?: boolean;
+};
+
+export type OrganizationDoc = {
+  id: string;
+  name: string;
+  contactEmail: string;
+  region: string;
+  missionFocus: string[];
+  verified: boolean;
+  createdAt?: string;
 };
 
 export type CreateProjectInput = {
@@ -82,6 +95,39 @@ export type EventDoc = {
   startsAt: string;
   category: string;
   rsvps: string[];
+  projectId?: string;
+  type?: 'meeting' | 'training' | 'community';
+  organizerUid?: string;
+};
+
+export type ApplicationDoc = {
+  id: string;
+  projectId: string;
+  projectTitle: string;
+  applicantUid: string;
+  applicantName: string;
+  applicantEmail: string;
+  availability: string;
+  message: string;
+  skillsMatch: number;
+  state: 'pending' | 'saved' | 'accepted' | 'rejected';
+  createdAt?: string;
+  projectLeadEmail: string;
+};
+
+export type TaskDoc = {
+  id: string;
+  projectId: string;
+  projectTitle: string;
+  title: string;
+  assignedVolunteerUid: string;
+  assignedVolunteerName: string;
+  dueDate: string;
+  priority: 'low' | 'medium' | 'high';
+  status: 'todo' | 'in_progress' | 'done' | 'overdue';
+  createdAt?: string;
+  updatedAt?: string;
+  projectLeadEmail: string;
 };
 
 const BADGES = {
@@ -276,6 +322,46 @@ export async function getUserProfile(uid: string) {
 
 export async function listProjects() {
   return listCollection<ProjectDoc>('projects');
+}
+
+export async function listVolunteers() {
+  const all = await listCollection<UserProfileDoc>('users');
+  return all.filter((user) => user.role === 'volunteer');
+}
+
+export async function listApplicationsForLead(projectLeadEmail: string) {
+  const all = await listCollection<ApplicationDoc>('applications');
+  const normalized = projectLeadEmail.trim().toLowerCase();
+  return all
+    .filter((application) => (application.projectLeadEmail || '').trim().toLowerCase() === normalized)
+    .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+}
+
+export async function updateApplicationState(applicationId: string, state: ApplicationDoc['state']) {
+  const row = await getDocument<ApplicationDoc>('applications', applicationId);
+  if (!row) throw new Error('Application not found.');
+  await setDocument('applications', applicationId, {
+    ...row,
+    state,
+  });
+}
+
+export async function listTasksForLead(projectLeadEmail: string) {
+  const all = await listCollection<TaskDoc>('tasks');
+  const normalized = projectLeadEmail.trim().toLowerCase();
+  return all
+    .filter((task) => (task.projectLeadEmail || '').trim().toLowerCase() === normalized)
+    .sort((a, b) => String(a.dueDate || '').localeCompare(String(b.dueDate || '')));
+}
+
+export async function updateTaskStatus(taskId: string, status: TaskDoc['status']) {
+  const row = await getDocument<TaskDoc>('tasks', taskId);
+  if (!row) throw new Error('Task not found.');
+  await setDocument('tasks', taskId, {
+    ...row,
+    status,
+    updatedAt: new Date().toISOString(),
+  });
 }
 
 export async function createProject(input: CreateProjectInput) {
@@ -551,6 +637,9 @@ export async function seedIfEmpty(uid: string, email: string, displayName: strin
         participants: [],
         participantCount: 0,
         projectLead: 'impact@turknode.org',
+        organizationId: 'org_enturk_green',
+        rolesOpen: 6,
+        pilotData: true,
       },
       {
         title: 'Youth STEM Tutor Circles',
@@ -565,6 +654,9 @@ export async function seedIfEmpty(uid: string, email: string, displayName: strin
         participants: [],
         participantCount: 0,
         projectLead: 'education@turknode.org',
+        organizationId: 'org_enturk_learning',
+        rolesOpen: 5,
+        pilotData: true,
       },
       {
         title: 'Community Digital Help Desk',
@@ -579,6 +671,9 @@ export async function seedIfEmpty(uid: string, email: string, displayName: strin
         participants: [],
         participantCount: 0,
         projectLead: 'tech4good@turknode.org',
+        organizationId: 'org_enturk_civic',
+        rolesOpen: 0,
+        pilotData: true,
       },
     ];
 
@@ -595,6 +690,9 @@ export async function seedIfEmpty(uid: string, email: string, displayName: strin
       startsAt: '2026-03-20T10:00:00-04:00',
       category: 'Environment',
       rsvps: [],
+      type: 'community',
+      projectId: '',
+      organizerUid: uid,
     });
     await addDocument('events', {
       title: 'Volunteer Mentor Onboarding',
@@ -602,6 +700,55 @@ export async function seedIfEmpty(uid: string, email: string, displayName: strin
       startsAt: '2026-03-25T18:00:00-04:00',
       category: 'Education',
       rsvps: [],
+      type: 'training',
+      projectId: '',
+      organizerUid: uid,
+    });
+  }
+
+  const organizations = await listCollection<OrganizationDoc>('organizations');
+  if (organizations.length === 0) {
+    await addDocument('organizations', {
+      name: 'ENTURK Community Lab',
+      contactEmail: 'partnerships@enturk.org',
+      region: 'Philadelphia-Delaware Pilot Region',
+      missionFocus: ['Sustainability', 'Education', 'Civic Innovation'],
+      verified: true,
+      createdAt: new Date().toISOString(),
+    });
+  }
+
+  const applications = await listCollection<ApplicationDoc>('applications');
+  if (applications.length === 0) {
+    await addDocument('applications', {
+      projectId: 'pilot_tree_renewal',
+      projectTitle: 'Neighborhood Tree Renewal',
+      applicantUid: uid,
+      applicantName: displayName,
+      applicantEmail: email,
+      availability: 'Weekends',
+      message: 'I can support planting logistics and community outreach shifts.',
+      skillsMatch: 84,
+      state: 'pending',
+      createdAt: new Date().toISOString(),
+      projectLeadEmail: 'impact@turknode.org',
+    });
+  }
+
+  const tasks = await listCollection<TaskDoc>('tasks');
+  if (tasks.length === 0) {
+    await addDocument('tasks', {
+      projectId: 'pilot_tree_renewal',
+      projectTitle: 'Neighborhood Tree Renewal',
+      title: 'Confirm volunteer check-in plan',
+      assignedVolunteerUid: uid,
+      assignedVolunteerName: displayName,
+      dueDate: '2026-03-18',
+      priority: 'high',
+      status: 'in_progress',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      projectLeadEmail: 'impact@turknode.org',
     });
   }
 }
