@@ -1018,17 +1018,57 @@ export default function Page() {
 
   if (!sessionUser) {
     return (
-      <main className="flex min-h-screen flex-col bg-[#f3f4f6] text-[#13161a]">
-        <header className="px-8 pb-6 pt-6">
-          <div className="text-5xl font-black tracking-tight">TurkNode</div>
+      <main className="relative min-h-screen overflow-hidden bg-[#030712] text-white">
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute -left-24 top-16 h-80 w-80 rounded-full bg-[#2563eb]/30 blur-3xl" />
+          <div className="absolute right-[-5rem] top-[-4rem] h-[30rem] w-[30rem] rounded-full bg-[#22c55e]/20 blur-3xl" />
+          <div className="absolute bottom-[-8rem] left-1/3 h-96 w-96 rounded-full bg-[#0ea5e9]/25 blur-3xl" />
+        </div>
+
+        <header className="relative z-10 mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-6">
+          <div className="text-4xl font-black tracking-tight">TurkNode</div>
+          <div className="hidden items-center gap-2 md:flex">
+            {["Mission", "Projects", "Impact", "Join"].map((item) => (
+              <span
+                key={item}
+                className="rounded-full border border-white/20 bg-white/5 px-3 py-1 text-xs font-semibold text-white/80"
+              >
+                {item}
+              </span>
+            ))}
+          </div>
         </header>
 
-        <section className="flex flex-1 items-center justify-center px-6">
-          <div className="w-full max-w-md">
-            <h1 className="text-center text-5xl font-black tracking-tight">Welcome to TurkNode</h1>
-            <p className="mt-3 text-center text-lg text-[#5e6570]">
-              Volunteer and project collaboration for impact teams.
+        <section className="relative z-10 mx-auto grid w-full max-w-7xl gap-10 px-6 pb-10 pt-2 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
+          <div>
+            <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-cyan-300/40 bg-cyan-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-cyan-200">
+              Community platform
             </p>
+            <h1 className="max-w-2xl text-4xl font-black leading-[1.05] tracking-tight text-white md:text-6xl">
+              Build local impact through volunteers, projects, and shared action.
+            </h1>
+            <p className="mt-5 max-w-xl text-base text-slate-300 md:text-lg">
+              TurkNode connects sustainability, education, and civic initiatives with skilled volunteers ready to contribute.
+            </p>
+            <div className="mt-8 grid gap-3 sm:grid-cols-3">
+              <div className="rounded-2xl border border-white/15 bg-white/5 p-4">
+                <p className="text-2xl font-black text-cyan-200">250+</p>
+                <p className="mt-1 text-xs uppercase tracking-wide text-slate-300">Volunteer hours</p>
+              </div>
+              <div className="rounded-2xl border border-white/15 bg-white/5 p-4">
+                <p className="text-2xl font-black text-emerald-200">40</p>
+                <p className="mt-1 text-xs uppercase tracking-wide text-slate-300">Active initiatives</p>
+              </div>
+              <div className="rounded-2xl border border-white/15 bg-white/5 p-4">
+                <p className="text-2xl font-black text-blue-200">1,200</p>
+                <p className="mt-1 text-xs uppercase tracking-wide text-slate-300">Lives supported</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-white/15 bg-white/95 p-6 text-[#13161a] shadow-2xl shadow-blue-900/40 backdrop-blur md:p-7">
+            <h2 className="text-3xl font-black tracking-tight text-[#0b1a37]">Welcome back</h2>
+            <p className="mt-2 text-sm text-slate-600">Sign in to continue your volunteer journey.</p>
 
             <button
               type="button"
@@ -1036,12 +1076,12 @@ export default function Page() {
                 void handleGoogleSignIn();
               }}
               disabled={isAuthActionPending || authStatus === "unavailable"}
-              className="mt-8 inline-flex w-full items-center justify-center rounded-xl border border-[#ced4dc] bg-white px-4 py-3 text-base font-semibold text-[#13161a] transition hover:bg-[#fafbfc] disabled:cursor-not-allowed disabled:opacity-60"
+              className="mt-6 inline-flex w-full items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-3 text-base font-semibold text-[#13161a] transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isAuthActionPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Continue with Google"}
             </button>
 
-            <div className="my-6 border-t border-[#d9dee5]" />
+            <div className="my-5 border-t border-slate-200" />
 
             <form
               onSubmit={(event) => {
@@ -1050,42 +1090,42 @@ export default function Page() {
               className="space-y-3"
             >
               <div>
-                <label className="mb-1 block text-sm font-semibold text-[#3e4650]">Email</label>
+                <label className="mb-1 block text-sm font-semibold text-slate-700">Email</label>
                 <input
                   type="email"
                   value={emailAuth.email}
                   onChange={(event) =>
                     setEmailAuth((prev) => ({ ...prev, email: event.target.value }))
                   }
-                  placeholder="Type your email"
-                  className="w-full rounded-xl border border-[#ced4dc] bg-white px-3 py-2.5 text-sm text-[#13161a] outline-none focus:border-[#0b2e59]"
+                  placeholder="you@example.com"
+                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-[#13161a] outline-none transition focus:border-[#0b2e59] focus:ring-2 focus:ring-blue-100"
                   required
                 />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-semibold text-[#3e4650]">Password</label>
+                <label className="mb-1 block text-sm font-semibold text-slate-700">Password</label>
                 <input
                   type="password"
                   value={emailAuth.password}
                   onChange={(event) =>
                     setEmailAuth((prev) => ({ ...prev, password: event.target.value }))
                   }
-                  placeholder="Type your password"
-                  className="w-full rounded-xl border border-[#ced4dc] bg-white px-3 py-2.5 text-sm text-[#13161a] outline-none focus:border-[#0b2e59]"
+                  placeholder="Enter password"
+                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-[#13161a] outline-none transition focus:border-[#0b2e59] focus:ring-2 focus:ring-blue-100"
                   required
                 />
               </div>
               <button
                 type="submit"
                 disabled={isAuthActionPending || authStatus === "unavailable"}
-                className="inline-flex w-full items-center justify-center rounded-xl bg-[#13161a] px-4 py-3 text-base font-semibold text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex w-full items-center justify-center rounded-xl bg-[#0b1a37] px-4 py-3 text-base font-semibold text-white transition hover:bg-[#13264d] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isAuthActionPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Continue with email"}
               </button>
             </form>
 
             {authStatus === "unavailable" ? (
-              <p className="mt-3 text-center text-sm text-red-700">
+              <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
                 Firebase auth is unavailable. Check frontend auth environment settings.
               </p>
             ) : null}
@@ -1097,8 +1137,9 @@ export default function Page() {
           </div>
         </section>
 
-        <footer className="border-t border-[#d7dbe1] px-6 py-6 text-center text-sm text-[#5e6570]">
-          By continuing, you agree to TurkNode Terms of Use and Privacy Policy.
+        <footer className="relative z-10 mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-2 px-6 pb-7 text-xs text-slate-400">
+          <p>By continuing, you agree to TurkNode Terms of Use and Privacy Policy.</p>
+          <p>Designed for community empowerment and measurable impact.</p>
         </footer>
       </main>
     );
