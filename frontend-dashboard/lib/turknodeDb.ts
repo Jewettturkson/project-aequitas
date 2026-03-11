@@ -6,6 +6,7 @@ export type UserProfileDoc = {
   uid: string;
   email: string;
   displayName: string;
+  photoUrl?: string;
   role: 'volunteer' | 'manager';
   bio: string;
   location: string;
@@ -85,11 +86,13 @@ const FIRESTORE_BASE = `https://firestore.googleapis.com/v1/projects/${PROJECT_I
 
 function calcProfileCompletion(profile: Partial<UserProfileDoc>) {
   const checks = [
+    profile.photoUrl,
     profile.displayName,
     profile.bio,
     profile.location,
     profile.interests && profile.interests.length > 0,
     profile.skills && profile.skills.length > 0,
+    typeof profile.availableForProjects === 'boolean',
   ];
   const done = checks.filter(Boolean).length;
   return Math.round((done / checks.length) * 100);
@@ -232,6 +235,7 @@ export async function upsertUserProfile(uid: string, data: Partial<UserProfileDo
     role: 'volunteer',
     email: data.email || existing?.email || '',
     displayName: data.displayName || existing?.displayName || 'TurkNode Volunteer',
+    photoUrl: data.photoUrl || existing?.photoUrl || '',
     bio: data.bio || existing?.bio || '',
     location: data.location || existing?.location || '',
     interests: data.interests || existing?.interests || [],

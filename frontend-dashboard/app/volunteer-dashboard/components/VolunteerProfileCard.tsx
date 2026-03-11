@@ -15,7 +15,16 @@ export default function VolunteerProfileCard({
   return (
     <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
       <div className="mb-5 flex flex-col items-center text-center">
-        <div className="mb-4 h-28 w-28 rounded-full bg-gradient-to-br from-cyan-300 to-blue-500" />
+        {volunteer.photoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={volunteer.photoUrl}
+            alt={`${volunteer.displayName} profile`}
+            className="mb-4 h-28 w-28 rounded-full object-cover"
+          />
+        ) : (
+          <div className="mb-4 h-28 w-28 rounded-full bg-gradient-to-br from-cyan-300 to-blue-500" />
+        )}
         <h2 className="text-3xl font-black tracking-tight text-slate-900">{volunteer.displayName}</h2>
         <p className="mt-1 text-sm font-medium text-slate-600">Community Volunteer</p>
       </div>

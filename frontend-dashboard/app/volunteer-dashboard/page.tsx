@@ -13,6 +13,45 @@ import type { DashboardTab } from "./types";
 import { useVolunteerDashboard } from "./useVolunteerDashboard";
 import type { NavSection } from "./useVolunteerDashboard";
 
+const MAX_UPLOAD_DIMENSION = 512;
+const MAX_UPLOAD_BYTES = 350_000;
+
+async function fileToDataUrl(file: File) {
+  const fileBuffer = await file.arrayBuffer();
+  const blob = new Blob([fileBuffer], { type: file.type });
+  const imageUrl = URL.createObjectURL(blob);
+
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error("Failed to load image."));
+      img.src = imageUrl;
+    });
+
+    const ratio = Math.min(
+      1,
+      MAX_UPLOAD_DIMENSION / Math.max(image.width, image.height)
+    );
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(image.width * ratio));
+    canvas.height = Math.max(1, Math.round(image.height * ratio));
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Unable to process image.");
+    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+    // Prefer jpeg for compact storage in Firestore profile document.
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.82);
+    if (dataUrl.length > MAX_UPLOAD_BYTES * 1.5) {
+      throw new Error("Image is too large. Use a smaller image.");
+    }
+    return dataUrl;
+  } finally {
+    URL.revokeObjectURL(imageUrl);
+  }
+}
+
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -72,7 +111,9 @@ export default function VolunteerDashboardPage() {
     location: profile?.location || "",
     skills: (profile?.skills || []).join(", "),
     interests: (profile?.interests || []).join(", "),
+    photoUrl: profile?.photoUrl || "",
   });
+  const [profilePhotoError, setProfilePhotoError] = useState("");
   const [messageDraft, setMessageDraft] = useState({ toUid: "manager-demo", text: "" });
   const [contributionDraft, setContributionDraft] = useState({
     projectId: "",
@@ -205,6 +246,7 @@ export default function VolunteerDashboardPage() {
         .split(",")
         .map((v) => v.trim())
         .filter(Boolean),
+      photoUrl: profileDraft.photoUrl.trim(),
     });
     setShowProfileEditor(false);
   };
@@ -690,7 +732,9 @@ export default function VolunteerDashboardPage() {
                   location: profile.location,
                   skills: (profile.skills || []).join(", "),
                   interests: (profile.interests || []).join(", "),
+                  photoUrl: profile.photoUrl || "",
                 });
+                setProfilePhotoError("");
                 setShowProfileEditor(true);
               }}
               onToggleAvailability={() => void onToggleAvailability(!profile.availableForProjects)}
@@ -746,6 +790,59 @@ export default function VolunteerDashboardPage() {
           <form onSubmit={handleProfileSubmit} className="w-full max-w-lg rounded-2xl bg-white p-5">
             <h3 className="mb-4 text-xl font-bold">Edit Volunteer Profile</h3>
             <div className="space-y-2">
+              <div className="rounded-xl border border-slate-200 p-3">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Profile photo
+                </p>
+                <div className="mb-3 flex items-center gap-3">
+                  {profileDraft.photoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={profileDraft.photoUrl}
+                      alt="Profile preview"
+                      className="h-14 w-14 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="h-14 w-14 rounded-full bg-gradient-to-br from-cyan-300 to-blue-500" />
+                  )}
+                  <div className="text-xs text-slate-600">
+                    Upload a square photo. It will be visible on your volunteer profile.
+                  </div>
+                </div>
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    setProfilePhotoError("");
+                    void fileToDataUrl(file)
+                      .then((photoDataUrl) => {
+                        setProfileDraft((prev) => ({ ...prev, photoUrl: photoDataUrl }));
+                      })
+                      .catch((uploadErr) => {
+                        setProfilePhotoError(
+                          uploadErr instanceof Error
+                            ? uploadErr.message
+                            : "Could not upload image."
+                        );
+                      });
+                  }}
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                />
+                {profileDraft.photoUrl ? (
+                  <button
+                    type="button"
+                    onClick={() => setProfileDraft((prev) => ({ ...prev, photoUrl: "" }))}
+                    className="mt-2 rounded-lg border border-slate-300 px-2 py-1 text-xs font-semibold"
+                  >
+                    Remove photo
+                  </button>
+                ) : null}
+                {profilePhotoError ? (
+                  <p className="mt-2 text-xs text-red-600">{profilePhotoError}</p>
+                ) : null}
+              </div>
               <input
                 value={profileDraft.displayName}
                 onChange={(e) => setProfileDraft((prev) => ({ ...prev, displayName: e.target.value }))}
