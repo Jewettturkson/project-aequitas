@@ -162,13 +162,24 @@ function getPostAuthRedirectPath(desiredRole?: SignInRole) {
     return desiredRole === "lead" ? "/project-lead-dashboard" : "/volunteer-dashboard";
   }
 
+  const roleFromStorage = window.localStorage.getItem("turknode:authRole");
+  const role = desiredRole || (roleFromStorage === "lead" ? "lead" : "volunteer");
+  const roleDefaultPath =
+    role === "lead" ? "/project-lead-dashboard" : "/volunteer-dashboard";
+
   const query = new URLSearchParams(window.location.search);
   const next = (query.get("next") || "").trim();
 
   if (!next.startsWith("/") || next.startsWith("//")) {
-    const roleFromStorage = window.localStorage.getItem("turknode:authRole");
-    const role = desiredRole || (roleFromStorage === "lead" ? "lead" : "volunteer");
-    return role === "lead" ? "/project-lead-dashboard" : "/volunteer-dashboard";
+    return roleDefaultPath;
+  }
+
+  // Prevent stale role redirects (e.g. ?next=/volunteer-dashboard while signing in as lead).
+  if (role === "lead" && next.startsWith("/volunteer-dashboard")) {
+    return roleDefaultPath;
+  }
+  if (role === "volunteer" && next.startsWith("/project-lead-dashboard")) {
+    return roleDefaultPath;
   }
 
   return next;
