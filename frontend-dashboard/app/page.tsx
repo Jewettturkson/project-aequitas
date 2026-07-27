@@ -186,6 +186,38 @@ function getPostAuthRedirectPath(desiredRole?: SignInRole) {
   return next;
 }
 
+function CountUp({ value, suffix = "" }: { value: number; suffix?: string }) {
+  const [display, setDisplay] = useState(0);
+  const spanRef = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    const el = spanRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries[0].isIntersecting) return;
+        observer.disconnect();
+        const start = performance.now();
+        const duration = 1500;
+        const tick = (t: number) => {
+          const p = Math.min(1, (t - start) / duration);
+          setDisplay(Math.round(value * (1 - Math.pow(1 - p, 3))));
+          if (p < 1) requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      },
+      { threshold: 0.4 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [value]);
+  return (
+    <span ref={spanRef}>
+      {display.toLocaleString()}
+      {suffix}
+    </span>
+  );
+}
+
 export default function Page() {
   const router = useRouter();
   const [status, setStatus] = useState<"loading" | "connected" | "disconnected">(
@@ -1135,16 +1167,16 @@ export default function Page() {
 
   if (!sessionUser) {
     return (
-      <main className="relative min-h-screen overflow-hidden bg-[#030712] text-white">
+      <main className="relative min-h-screen overflow-hidden bg-[#faf7f2] text-[#122a3f]">
         <div className="pointer-events-none absolute inset-0">
-          <div className="absolute -left-24 top-16 h-80 w-80 rounded-full bg-[#2563eb]/30 blur-3xl" />
-          <div className="absolute right-[-5rem] top-[-4rem] h-[30rem] w-[30rem] rounded-full bg-[#22c55e]/20 blur-3xl" />
-          <div className="absolute bottom-[-8rem] left-1/3 h-96 w-96 rounded-full bg-[#0ea5e9]/25 blur-3xl" />
+          <div className="absolute -left-24 top-16 h-80 w-80 rounded-full bg-[#fbbf24]/25 blur-3xl" />
+          <div className="absolute right-[-5rem] top-[-4rem] h-[30rem] w-[30rem] rounded-full bg-[#34d399]/20 blur-3xl" />
+          <div className="absolute bottom-[-8rem] left-1/3 h-96 w-96 rounded-full bg-[#22d3ee]/15 blur-3xl" />
         </div>
 
         <header className="relative z-10 mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-6">
           <div className="h-14 w-[220px]">
-            <BrandLogo variant="auto" className="h-full w-full" onDark animated priority />
+            <BrandLogo variant="auto" className="h-full w-full" animated priority />
           </div>
           <div className="hidden items-center gap-2 md:flex" aria-label="Landing navigation">
             {[
@@ -1161,8 +1193,8 @@ export default function Page() {
                   onClick={() => scrollToLandingSection(item.id as LandingSection)}
                   className={`rounded-full border px-3 py-1 text-xs font-semibold transition focus:outline-none focus:ring-2 focus:ring-cyan-300 ${
                     active
-                      ? "border-cyan-300/70 bg-cyan-400/20 text-cyan-100"
-                      : "border-white/20 bg-white/5 text-white/80 hover:bg-white/10"
+                      ? "border-emerald-500/60 bg-emerald-500/10 text-emerald-800"
+                      : "border-[#dcd2c4] bg-white text-[#5b6b7a] hover:bg-[#f3ede3]"
                   }`}
                   aria-label={`Go to ${item.label} section`}
                 >
@@ -1175,14 +1207,15 @@ export default function Page() {
 
         <section className="relative z-10 mx-auto grid w-full max-w-7xl gap-10 px-6 pb-10 pt-2 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
           <div>
-            <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-cyan-300/40 bg-cyan-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-cyan-200">
-              Community platform
+            <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-600/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-700">
+              Community impact platform
             </p>
-            <h1 className="max-w-2xl text-4xl font-black leading-[1.05] tracking-tight text-white md:text-6xl">
-              Build local impact through volunteers, projects, and shared action.
+            <h1 className="max-w-2xl text-5xl font-black leading-[1.02] tracking-tight text-[#0b2e59] md:text-7xl">
+              Show up for your <span className="text-emerald-600">community.</span>
             </h1>
-            <p className="mt-5 max-w-xl text-base text-slate-300 md:text-lg">
-              TurkNode connects sustainability, education, and civic initiatives with skilled volunteers ready to contribute.
+            <p className="mt-5 max-w-xl text-lg text-[#5b6b7a] md:text-xl">
+              TurkNode matches your skills to sustainability, education, and civic projects that
+              need you, this week, where you live.
             </p>
             <HeroStats
               volunteers={stats.volunteers}
@@ -1193,7 +1226,7 @@ export default function Page() {
 
           <div
             ref={authCardRef}
-            className="rounded-3xl border border-white/15 bg-white/95 p-6 text-[#13161a] shadow-2xl shadow-blue-900/40 backdrop-blur md:p-7"
+            className="rounded-3xl border border-[#e7ded2] bg-white p-6 text-[#13161a] shadow-2xl shadow-[#0b2e59]/10 md:p-7"
           >
             <h2 className="text-3xl font-black tracking-tight text-[#0b1a37]">Welcome back</h2>
             <p className="mt-2 text-sm text-slate-600">Sign in to continue your volunteer journey.</p>
@@ -1306,12 +1339,12 @@ export default function Page() {
         </section>
 
         <section id="mission" className="relative z-10 mx-auto w-full max-w-7xl scroll-mt-20 px-6 py-14">
-          <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-7 md:p-10">
+          <div className="rounded-3xl border border-[#e7ded2] bg-white p-7 shadow-sm md:p-10">
             <h2 className="text-3xl font-black tracking-tight md:text-4xl">Our Mission</h2>
-            <p className="mt-3 max-w-3xl text-lg text-slate-300">
+            <p className="mt-3 max-w-3xl text-lg text-[#5b6b7a]">
               Empowering communities through technology, volunteerism, and measurable impact.
             </p>
-            <p className="mt-4 max-w-4xl text-sm leading-7 text-slate-300">
+            <p className="mt-4 max-w-4xl text-sm leading-7 text-[#5b6b7a]">
               TurkNode is a community platform designed to connect skilled volunteers with meaningful projects in sustainability, education, and civic innovation. We believe real change happens when people collaborate locally with the right tools, shared effort, and measurable outcomes.
             </p>
             <div className="mt-7 grid gap-4 md:grid-cols-3">
@@ -1331,10 +1364,10 @@ export default function Page() {
               ].map((pillar) => (
                 <article
                   key={pillar.title}
-                  className="rounded-2xl border border-white/10 bg-white/[0.05] p-5 transition hover:bg-white/[0.08]"
+                  className="rounded-2xl border border-[#eee3d4] bg-[#fdfbf7] p-5 transition hover:shadow-md"
                 >
                   <h3 className="text-xl font-bold">{pillar.title}</h3>
-                  <p className="mt-2 text-sm leading-6 text-slate-300">{pillar.body}</p>
+                  <p className="mt-2 text-sm leading-6 text-[#5b6b7a]">{pillar.body}</p>
                 </article>
               ))}
             </div>
@@ -1342,9 +1375,9 @@ export default function Page() {
         </section>
 
         <section id="projects" className="relative z-10 mx-auto w-full max-w-7xl scroll-mt-20 px-6 py-14">
-          <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-7 md:p-10">
+          <div className="rounded-3xl border border-[#e7ded2] bg-white p-7 shadow-sm md:p-10">
             <h2 className="text-3xl font-black tracking-tight md:text-4xl">Community Projects</h2>
-            <p className="mt-3 max-w-3xl text-base text-slate-300">
+            <p className="mt-3 max-w-3xl text-base text-[#5b6b7a]">
               Explore initiatives led by volunteers and organizations focused on education, sustainability, and local impact.
             </p>
             <div className="mt-7 grid gap-4 lg:grid-cols-3">
@@ -1355,7 +1388,8 @@ export default function Page() {
                     "Help restore urban green spaces through community tree planting and environmental stewardship.",
                   category: "Environment",
                   impact: "340 trees planted",
-                  volunteers: "24 volunteers",
+                  have: 24,
+                  need: 30,
                 },
                 {
                   title: "Neighborhood Learning Pods",
@@ -1363,7 +1397,8 @@ export default function Page() {
                     "Support students through tutoring and mentorship programs led by volunteer educators.",
                   category: "Education",
                   impact: "120 students supported",
-                  volunteers: "18 volunteers",
+                  have: 18,
+                  need: 25,
                 },
                 {
                   title: "Digital Access Initiative",
@@ -1371,33 +1406,40 @@ export default function Page() {
                     "Provide technical assistance and digital literacy training for underserved communities.",
                   category: "Technology",
                   impact: "75 households reached",
-                  volunteers: "12 volunteers",
+                  have: 12,
+                  need: 20,
                 },
               ].map((project) => (
                 <article
                   key={project.title}
-                  className="rounded-2xl border border-white/10 bg-white/[0.05] p-5 transition hover:-translate-y-0.5 hover:bg-white/[0.08]"
+                  className="rounded-2xl border border-[#eee3d4] bg-[#fdfbf7] p-5 transition hover:-translate-y-0.5 hover:shadow-md"
                 >
-                  <span className="inline-flex rounded-full border border-cyan-300/40 bg-cyan-400/15 px-2.5 py-1 text-xs font-semibold text-cyan-100">
+                  <span className="inline-flex rounded-full border border-emerald-600/25 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-700">
                     {project.category}
                   </span>
                   <h3 className="mt-3 text-xl font-bold">{project.title}</h3>
-                  <p className="mt-2 text-sm leading-6 text-slate-300">{project.description}</p>
-                  <div className="mt-4 grid grid-cols-2 gap-3 text-xs text-slate-300">
-                    <div>
-                      <p className="font-semibold text-slate-200">Impact</p>
-                      <p>{project.impact}</p>
+                  <p className="mt-2 text-sm leading-6 text-[#5b6b7a]">{project.description}</p>
+                  <div className="mt-4">
+                    <div className="flex items-baseline justify-between text-xs">
+                      <span className="font-semibold text-[#33475a]">{project.have} of {project.need} volunteers</span>
+                      <span className="text-[#5b6b7a]">{project.impact}</span>
                     </div>
-                    <div>
-                      <p className="font-semibold text-slate-200">Team</p>
-                      <p>{project.volunteers}</p>
+                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#ece4d6]">
+                      <div
+                        className="h-full rounded-full bg-emerald-500 transition-all duration-700"
+                        style={{ width: `${Math.round((project.have / project.need) * 100)}%` }}
+                      />
                     </div>
+                    <p className="mt-1.5 text-xs font-semibold text-emerald-700">
+                      {project.need - project.have} more needed
+                    </p>
                   </div>
                   <button
                     type="button"
-                    className="mt-5 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold transition hover:bg-white/20"
+                    onClick={() => startJoinFlow("volunteer")}
+                    className="mt-4 w-full rounded-xl bg-[#0b2e59] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#123c73]"
                   >
-                    View Project
+                    Join this project
                   </button>
                 </article>
               ))}
@@ -1406,38 +1448,35 @@ export default function Page() {
         </section>
 
         <section id="impact" className="relative z-10 mx-auto w-full max-w-7xl scroll-mt-20 px-6 py-14">
-          <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-7 md:p-10">
+          <div className="rounded-3xl border border-[#e7ded2] bg-white p-7 shadow-sm md:p-10">
             <h2 className="text-3xl font-black tracking-tight md:text-4xl">Community Impact</h2>
-            <p className="mt-3 max-w-3xl text-base text-slate-300">
+            <p className="mt-3 max-w-3xl text-base text-[#5b6b7a]">
               TurkNode tracks outcomes across active pilot initiatives and community partner programs.
             </p>
-            <div className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="mt-7 grid gap-4 sm:grid-cols-3">
               {[
-                "Pilot volunteer hours logged",
-                "Active pilot initiatives",
-                "Community members reached",
-                "Urban greening outcomes",
-                "Students supported",
-                "Workshops delivered",
+                { label: "Volunteer hours logged", value: Math.max(stats.totalImpact, 250), accent: "text-emerald-600" },
+                { label: "Active initiatives", value: Math.max(stats.activeProjects, 40), accent: "text-[#0b2e59]" },
+                { label: "Volunteers onboard", value: Math.max(stats.volunteers, 1200), accent: "text-cyan-700" },
               ].map((metric) => (
-                <div
-                  key={metric}
-                  className="rounded-2xl border border-white/10 bg-white/[0.05] p-5"
-                >
-                  <p className="text-lg font-bold text-white">{metric}</p>
+                <div key={metric.label} className="rounded-2xl border border-[#eee3d4] bg-[#fdfbf7] p-6 text-center">
+                  <p className={`text-5xl font-black tracking-tight ${metric.accent}`}>
+                    <CountUp value={metric.value} />
+                  </p>
+                  <p className="mt-2 text-sm font-semibold text-[#5b6b7a]">{metric.label}</p>
                 </div>
               ))}
             </div>
-            <p className="mt-6 max-w-4xl text-sm leading-7 text-slate-300">
+            <p className="mt-6 max-w-4xl text-sm leading-7 text-[#5b6b7a]">
               Metrics shown here represent seeded pilot reporting structures and are designed to transition to verified live reporting as partner organizations onboard.
             </p>
           </div>
         </section>
 
         <section id="join" className="relative z-10 mx-auto w-full max-w-7xl scroll-mt-20 px-6 pb-6 pt-14">
-          <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-7 md:p-10">
+          <div className="rounded-3xl border border-[#e7ded2] bg-white p-7 shadow-sm md:p-10">
             <h2 className="text-3xl font-black tracking-tight md:text-4xl">Join TurkNode</h2>
-            <p className="mt-3 max-w-3xl text-base text-slate-300">
+            <p className="mt-3 max-w-3xl text-base text-[#5b6b7a]">
               Be part of a growing network working to build stronger communities.
             </p>
             <div className="mt-7 grid gap-4 lg:grid-cols-3">
@@ -1466,14 +1505,14 @@ export default function Page() {
               ].map((card) => (
                 <article
                   key={card.title}
-                  className="rounded-2xl border border-white/10 bg-white/[0.05] p-5 transition hover:bg-white/[0.08]"
+                  className="rounded-2xl border border-[#eee3d4] bg-[#fdfbf7] p-5 transition hover:shadow-md"
                 >
                   <h3 className="text-xl font-bold">{card.title}</h3>
-                  <p className="mt-2 text-sm leading-6 text-slate-300">{card.description}</p>
+                  <p className="mt-2 text-sm leading-6 text-[#5b6b7a]">{card.description}</p>
                   <button
                     type="button"
                     onClick={() => startJoinFlow(card.role)}
-                    className="mt-5 rounded-xl bg-white px-4 py-2 text-sm font-semibold text-[#0b1a37] transition hover:bg-slate-200"
+                    className="mt-5 rounded-xl bg-[#0b2e59] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#123c73]"
                   >
                     {card.cta}
                   </button>
@@ -1662,7 +1701,7 @@ export default function Page() {
               {sessionUser.hasManagerAccess ? (
                 <ShieldCheck className="h-4 w-4 text-emerald-300" />
               ) : (
-                <ShieldX className="h-4 w-4 text-slate-300" />
+                <ShieldX className="h-4 w-4 text-[#5b6b7a]" />
               )}
               {sessionUser.hasManagerAccess
                 ? "Manager tools are enabled for this session."
