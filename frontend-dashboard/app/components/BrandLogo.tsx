@@ -1,59 +1,48 @@
-import Image from "next/image";
+"use client";
 
+// TurkNode wordmark: lowercase Manrope ExtraBold with the cyan full stop.
+// animated: letters rise in staggered, the period pops last and keeps a
+// slow heartbeat pulse. CSS-only; respects prefers-reduced-motion.
 type BrandLogoProps = {
   variant?: "full" | "icon" | "auto";
   className?: string;
   priority?: boolean;
-  /** Renders the mark in white for dark backgrounds (the source SVG is navy). */
   onDark?: boolean;
+  animated?: boolean;
 };
 
-export default function BrandLogo({ variant = "auto", className = "", priority = false, onDark = false }: BrandLogoProps) {
-  const imgClass = onDark ? "object-contain brightness-0 invert" : "object-contain";
+const WORD = "turknode".split("");
+
+export default function BrandLogo({ variant = "auto", className = "", onDark = false, animated = false }: BrandLogoProps) {
+  const color = onDark ? "text-white" : "text-[#0b1a37]";
+  const icon = variant === "icon";
+  const text = icon ? ["t", "n"] : WORD;
+
   return (
-    <div className={`relative ${className}`} aria-label="TurkNode branding">
-      {variant === "icon" ? (
-        <Image
-          src="/branding/turknode-icon.svg"
-          alt="TurkNode icon"
-          fill
-          priority={priority}
-          className={imgClass}
-          sizes="(max-width: 768px) 64px, 96px"
-        />
-      ) : variant === "full" ? (
-        <Image
-          src="/branding/turknode-full.svg"
-          alt="TurkNode logo"
-          fill
-          priority={priority}
-          className={imgClass}
-          sizes="(max-width: 768px) 220px, 320px"
-        />
-      ) : (
-        <>
-          <div className="relative hidden h-full w-full sm:block">
-            <Image
-              src="/branding/turknode-full.svg"
-              alt="TurkNode logo"
-              fill
-              priority={priority}
-              className={imgClass}
-              sizes="(max-width: 1024px) 240px, 340px"
-            />
-          </div>
-          <div className="relative h-full w-full sm:hidden">
-            <Image
-              src="/branding/turknode-icon.svg"
-              alt="TurkNode icon"
-              fill
-              priority={priority}
-              className={imgClass}
-              sizes="88px"
-            />
-          </div>
-        </>
-      )}
-    </div>
+    <span
+      className={`flex h-full w-full items-center justify-center font-extrabold tracking-tight ${color} ${className}`}
+      style={{ fontFamily: "Manrope, Inter, sans-serif" }}
+      aria-label="TurkNode"
+    >
+      <span className={icon ? "text-[1.5em]" : "text-[1.35em] md:text-[1.6em]"}>
+        {animated ? (
+          <>
+            {text.map((letter, i) => (
+              <span key={i} className="tn-clip">
+                <span className="tn-letter" style={{ animationDelay: `${i * 0.055}s` }}>
+                  {letter}
+                </span>
+              </span>
+            ))}
+            <span className="tn-dot text-cyan-400">.</span>
+          </>
+        ) : (
+          <>
+            {text.join("")}
+            <span className="text-cyan-400">.</span>
+          </>
+        )}
+      </span>
+    </span>
   );
 }
