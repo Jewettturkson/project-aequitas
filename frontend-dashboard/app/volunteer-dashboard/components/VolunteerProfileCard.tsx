@@ -13,7 +13,7 @@ export default function VolunteerProfileCard({
   onToggleAvailability,
 }: VolunteerProfileCardProps) {
   return (
-    <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-300 hover:border-slate-300 hover:shadow-md">
+    <section className="rounded-3xl border border-[#e9e0d4] bg-white p-6 shadow-sm transition-all duration-300 hover:border-[#d8cec5] hover:shadow-md">
       <div className="mb-5 flex flex-col items-center text-center">
         {volunteer.photoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -25,14 +25,14 @@ export default function VolunteerProfileCard({
         ) : (
           <div className="mb-4 h-28 w-28 rounded-full bg-gradient-to-br from-cyan-300 to-blue-500" />
         )}
-        <h2 className="text-3xl font-black tracking-tight text-slate-900">{volunteer.displayName}</h2>
+        <h2 className="text-3xl font-black tracking-tight text-[#122a3f]">{volunteer.displayName}</h2>
         <p className="mt-1 text-sm font-medium text-slate-600">Community Volunteer</p>
       </div>
 
       <button
         type="button"
         onClick={onEditProfile}
-        className="mb-4 w-full rounded-xl bg-[#0E1628] px-4 py-3 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#15223a] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
+        className="mb-4 w-full rounded-xl bg-[#0b1f38] px-4 py-3 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#123c73] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
       >
         Edit Profile
       </button>
@@ -57,7 +57,7 @@ export default function VolunteerProfileCard({
           {[...(volunteer.skills || []), ...(volunteer.interests || [])].slice(0, 8).map((interest) => (
             <span
               key={interest}
-              className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700"
+              className="rounded-full border border-[#e9e0d4] bg-[#faf7f2] px-3 py-1 text-xs font-medium text-slate-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700"
             >
               {interest}
             </span>
@@ -71,25 +71,25 @@ export default function VolunteerProfileCard({
       </div>
 
       <dl className="grid grid-cols-2 gap-3 text-sm">
-        <div className="rounded-xl border border-slate-200 p-3">
+        <div className="rounded-xl border border-[#e9e0d4] p-3">
           <dt className="mb-1 flex items-center gap-1 text-xs uppercase tracking-wide text-slate-500">
             <MapPin className="h-3.5 w-3.5" /> Location
           </dt>
           <dd className="font-semibold text-slate-800">{volunteer.location || "Not set"}</dd>
         </div>
-        <div className="rounded-xl border border-slate-200 p-3">
+        <div className="rounded-xl border border-[#e9e0d4] p-3">
           <dt className="mb-1 flex items-center gap-1 text-xs uppercase tracking-wide text-slate-500">
             <Clock3 className="h-3.5 w-3.5" /> Hours
           </dt>
           <dd className="font-semibold text-slate-800">{volunteer.hoursContributed || 0}h</dd>
         </div>
-        <div className="rounded-xl border border-slate-200 p-3">
+        <div className="rounded-xl border border-[#e9e0d4] p-3">
           <dt className="mb-1 flex items-center gap-1 text-xs uppercase tracking-wide text-slate-500">
             <Sparkles className="h-3.5 w-3.5" /> Completed
           </dt>
           <dd className="font-semibold text-slate-800">{volunteer.completedProjects || 0}</dd>
         </div>
-        <div className="rounded-xl border border-slate-200 p-3">
+        <div className="rounded-xl border border-[#e9e0d4] p-3">
           <dt className="mb-1 flex items-center gap-1 text-xs uppercase tracking-wide text-slate-500">
             <Medal className="h-3.5 w-3.5" /> Impact
           </dt>

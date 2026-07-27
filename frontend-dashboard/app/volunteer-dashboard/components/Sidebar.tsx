@@ -53,13 +53,13 @@ export default function Sidebar({
         type="button"
         onClick={onToggle}
         aria-label="Toggle sidebar"
-        className="fixed left-4 top-4 z-50 inline-flex h-11 w-11 items-center justify-center rounded-xl bg-[#0E1628] text-white shadow-lg transition hover:bg-[#121f36] lg:hidden"
+        className="fixed left-4 top-4 z-50 inline-flex h-11 w-11 items-center justify-center rounded-xl bg-[#0b1f38] text-white shadow-lg transition hover:bg-[#12294a] lg:hidden"
       >
         {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
       </button>
 
       <aside
-        className={`fixed inset-y-0 left-0 z-40 w-[280px] transform border-r border-white/10 bg-[#0E1628] text-white transition-transform duration-300 lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 w-[280px] transform border-r border-white/10 bg-[#0b1f38] text-white transition-transform duration-300 lg:translate-x-0 ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >

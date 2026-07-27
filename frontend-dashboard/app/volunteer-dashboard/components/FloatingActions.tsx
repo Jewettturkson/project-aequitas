@@ -25,7 +25,7 @@ export default function FloatingActions({
           type="button"
           onClick={action.onClick}
           aria-label={action.label}
-          className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 hover:shadow-md"
+          className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-[#e9e0d4] bg-white text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-[#faf7f2] hover:shadow-md"
         >
           <action.icon className="h-5 w-5" />
         </button>

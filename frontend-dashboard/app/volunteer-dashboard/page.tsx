@@ -67,8 +67,11 @@ async function fileToDataUrl(file: File) {
 
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-300 hover:border-slate-300 hover:shadow-md">
-      <h2 className="mb-4 text-xl font-black tracking-tight text-slate-900 sm:text-2xl">{title}</h2>
+    <section className="rounded-3xl border border-[#e9e0d4] bg-white p-6 shadow-sm transition-all duration-300 hover:shadow-md sm:p-7">
+      <div className="mb-5 flex items-center gap-3">
+        <span aria-hidden className="h-6 w-1.5 rounded-full bg-emerald-500" />
+        <h2 className="text-xl font-black tracking-tight text-[#0b2e59] sm:text-2xl">{title}</h2>
+      </div>
       {children}
     </section>
   );
@@ -191,10 +194,10 @@ export default function VolunteerDashboardPage() {
 
   const missionClasses =
     themeMode === "clean"
-      ? "bg-slate-50"
+      ? "bg-[#faf7f2]"
       : themeMode === "contrast"
       ? "bg-slate-100"
-      : "bg-[#F6F7F5]";
+      : "bg-[#faf7f2]";
 
   const validSections: NavSection[] = [
     "home",
@@ -244,8 +247,8 @@ export default function VolunteerDashboardPage() {
 
   if (authStatus === "loading") {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#F6F7F5] text-slate-900">
-        <div className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700">
+      <main className="flex min-h-screen items-center justify-center bg-[#faf7f2] text-[#122a3f]">
+        <div className="inline-flex items-center gap-2 rounded-full border border-[#d8cec5] bg-white px-4 py-2 text-sm font-semibold text-slate-700">
           <Loader2 className="h-4 w-4 animate-spin" /> Loading TurkNode volunteer workspace...
         </div>
       </main>
@@ -254,7 +257,7 @@ export default function VolunteerDashboardPage() {
 
   if (authStatus === "unavailable") {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#F6F7F5] p-6 text-center">
+      <main className="flex min-h-screen items-center justify-center bg-[#faf7f2] p-6 text-center">
         <div className="rounded-2xl border border-amber-200 bg-white p-6">
           <p className="text-slate-800">Firebase configuration is unavailable in this environment.</p>
           <p className="mt-2 text-sm text-slate-600">
@@ -267,8 +270,8 @@ export default function VolunteerDashboardPage() {
 
   if (!profile) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#F6F7F5] p-6 text-center">
-        <div className="rounded-2xl border border-slate-200 bg-white p-6">
+      <main className="flex min-h-screen items-center justify-center bg-[#faf7f2] p-6 text-center">
+        <div className="rounded-2xl border border-[#e9e0d4] bg-white p-6">
           <p className="mb-3 text-slate-700">Redirecting to sign in...</p>
           <button
             type="button"
@@ -281,7 +284,7 @@ export default function VolunteerDashboardPage() {
                   )}`
               )
             }
-            className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
+            className="rounded-xl bg-[#0b2e59] px-4 py-2 text-sm font-semibold text-white"
           >
             Return to sign in
           </button>
@@ -372,7 +375,7 @@ export default function VolunteerDashboardPage() {
           <SectionCard title="Completed Projects">
             <div className="grid gap-4 md:grid-cols-2">
               {completedProjects.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
+                <div className="rounded-2xl border border-dashed border-[#d8cec5] bg-[#faf7f2] p-6 text-center">
                   <p className="text-base font-semibold text-slate-800">Start making an impact</p>
                   <p className="mt-1 text-sm text-slate-600">
                     Join a project and log your hours. Completed initiatives will appear here.
@@ -384,7 +387,7 @@ export default function VolunteerDashboardPage() {
                       setActiveTab("projects");
                       router.replace("/volunteer-dashboard?section=discover", { scroll: false });
                     }}
-                    className="mt-3 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
+                    className="mt-3 rounded-xl bg-[#0b2e59] px-4 py-2 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#123c73] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
                   >
                     Discover Projects
                   </button>
@@ -393,7 +396,7 @@ export default function VolunteerDashboardPage() {
                 completedProjects.map((project) => (
                   <article
                     key={project.id}
-                    className="rounded-2xl border border-slate-200 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-sm"
+                    className="rounded-2xl border border-[#e9e0d4] p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-[#d8cec5] hover:shadow-sm"
                   >
                     <p className="text-xs font-semibold uppercase text-slate-500">{project.category}</p>
                     <h3 className="mt-1 text-lg font-bold">{project.title}</h3>
@@ -414,7 +417,7 @@ export default function VolunteerDashboardPage() {
               <input
                 value={filterCategory}
                 onChange={(e) => setFilterCategory(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2"
+                className="w-full rounded-xl border border-[#e9e0d4] px-3 py-2"
                 placeholder="Environment"
               />
             </label>
@@ -423,7 +426,7 @@ export default function VolunteerDashboardPage() {
               <input
                 value={filterLocation}
                 onChange={(e) => setFilterLocation(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2"
+                className="w-full rounded-xl border border-[#e9e0d4] px-3 py-2"
                 placeholder="Philadelphia"
               />
             </label>
@@ -432,7 +435,7 @@ export default function VolunteerDashboardPage() {
               <input
                 value={filterSkill}
                 onChange={(e) => setFilterSkill(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2"
+                className="w-full rounded-xl border border-[#e9e0d4] px-3 py-2"
                 placeholder="Teaching"
               />
             </label>
@@ -444,7 +447,7 @@ export default function VolunteerDashboardPage() {
               return (
                 <article
                   key={String(project.id)}
-                  className="rounded-2xl border border-slate-200 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-sm"
+                  className="rounded-2xl border border-[#e9e0d4] p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-[#d8cec5] hover:shadow-sm"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
@@ -456,7 +459,7 @@ export default function VolunteerDashboardPage() {
                       <button
                         type="button"
                         onClick={() => void onSaveProject(String(project.id))}
-                        className="rounded-full border border-slate-300 px-3 py-1.5 text-xs font-semibold transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
+                        className="rounded-full border border-[#d8cec5] px-3 py-1.5 text-xs font-semibold transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
                       >
                         {saved ? "Unsave" : "Save"}
                       </button>
@@ -472,7 +475,7 @@ export default function VolunteerDashboardPage() {
                         <button
                           type="button"
                           onClick={() => void onJoinProject(String(project.id))}
-                          className="rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
+                          className="rounded-full bg-[#0b2e59] px-3 py-1.5 text-xs font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
                         >
                           Join Project
                         </button>
@@ -515,7 +518,7 @@ export default function VolunteerDashboardPage() {
             project team.
           </p>
           {livePlatformProjects.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
+            <div className="rounded-2xl border border-dashed border-[#d8cec5] bg-[#faf7f2] p-6 text-center">
               <p className="text-base font-semibold text-slate-800">No open projects right now</p>
               <p className="mt-1 text-sm text-slate-600">
                 New initiatives are onboarding. Check back soon, or ask a local organization to
@@ -527,18 +530,18 @@ export default function VolunteerDashboardPage() {
               {livePlatformProjects.map((project) => (
                 <article
                   key={project.id}
-                  className="rounded-2xl border border-slate-200 p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm"
+                  className="rounded-2xl border border-[#e9e0d4] p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm"
                 >
                   <span className="inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">
                     {project.status}
                   </span>
-                  <h3 className="mt-2 text-lg font-bold text-slate-900">{project.name}</h3>
+                  <h3 className="mt-2 text-lg font-bold text-[#122a3f]">{project.name}</h3>
                   <p className="mt-1.5 line-clamp-3 text-sm leading-6 text-slate-600">{project.description}</p>
                   <button
                     type="button"
                     disabled={applyingProjectId === project.id || appliedProjectIds.includes(project.id)}
                     onClick={() => void applyToPlatformProject(project)}
-                    className="mt-4 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="mt-4 rounded-xl bg-[#0b2e59] px-4 py-2 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#123c73] disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {appliedProjectIds.includes(project.id)
                       ? "Application sent"
@@ -562,14 +565,14 @@ export default function VolunteerDashboardPage() {
             <button
               type="button"
               onClick={() => setShowContributionModal(true)}
-              className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
+              className="rounded-xl bg-[#0b2e59] px-4 py-2 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#123c73] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
             >
               Log Hours
             </button>
           </div>
           <div className="space-y-3">
             {contributions.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
+              <div className="rounded-2xl border border-dashed border-[#d8cec5] bg-[#faf7f2] p-6 text-center">
                 <p className="text-base font-semibold text-slate-800">No contributions yet</p>
                 <p className="mt-1 text-sm text-slate-600">
                   Start with one active project and track your hours to build impact visibility.
@@ -581,7 +584,7 @@ export default function VolunteerDashboardPage() {
                     setActiveTab("projects");
                     router.replace("/volunteer-dashboard?section=discover", { scroll: false });
                   }}
-                  className="mt-3 rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
+                  className="mt-3 rounded-xl border border-[#d8cec5] px-4 py-2 text-sm font-semibold text-slate-700 transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
                 >
                   Find a project
                 </button>
@@ -590,7 +593,7 @@ export default function VolunteerDashboardPage() {
               contributions.map((item, index) => (
                 <article
                   key={`${item.projectId}-${index}`}
-                  className="rounded-2xl border border-slate-200 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-sm"
+                  className="rounded-2xl border border-[#e9e0d4] p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-[#d8cec5] hover:shadow-sm"
                 >
                   <p className="text-sm font-semibold">{item.projectTitle}</p>
                   <p className="text-sm text-slate-600">{item.hours}h • {item.notes}</p>
@@ -609,19 +612,19 @@ export default function VolunteerDashboardPage() {
       return (
         <SectionCard title="Messages">
           <div className="mb-4 grid gap-3 md:grid-cols-2">
-            <div className="rounded-2xl border border-slate-200 p-4">
+            <div className="rounded-2xl border border-[#e9e0d4] p-4">
               <p className="mb-2 flex items-center gap-2 text-sm font-semibold">
                 <MessageCircle className="h-4 w-4 text-cyan-600" /> Conversation Threads
               </p>
               {threads.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-600">
+                <div className="rounded-xl border border-dashed border-[#d8cec5] bg-[#faf7f2] p-4 text-sm text-slate-600">
                   No active conversations yet. Reach out to a project lead to align on tasks.
                 </div>
               ) : (
                 threads.map((thread) => (
                   <div
                     key={String(thread.id)}
-                    className="mb-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs transition-all duration-200 hover:border-slate-300 hover:bg-white"
+                    className="mb-2 rounded-xl border border-[#e9e0d4] bg-[#faf7f2] p-3 text-xs transition-all duration-200 hover:border-[#d8cec5] hover:bg-white"
                   >
                     <p className="font-semibold">Thread {String(thread.id)}</p>
                     <p className="text-slate-600">{String(thread.lastMessage || "No messages yet")}</p>
@@ -629,24 +632,24 @@ export default function VolunteerDashboardPage() {
                 ))
               )}
             </div>
-            <form onSubmit={handleSendMessage} className="rounded-2xl border border-slate-200 p-4">
+            <form onSubmit={handleSendMessage} className="rounded-2xl border border-[#e9e0d4] p-4">
               <p className="mb-2 text-sm font-semibold">Send Message</p>
               <input
                 value={messageDraft.toUid}
                 onChange={(e) => setMessageDraft((prev) => ({ ...prev, toUid: e.target.value }))}
-                className="mb-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                className="mb-2 w-full rounded-xl border border-[#e9e0d4] px-3 py-2 text-sm"
                 placeholder="Recipient UID"
               />
               <textarea
                 value={messageDraft.text}
                 onChange={(e) => setMessageDraft((prev) => ({ ...prev, text: e.target.value }))}
-                className="mb-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                className="mb-2 w-full rounded-xl border border-[#e9e0d4] px-3 py-2 text-sm"
                 rows={4}
                 placeholder="Write your message"
               />
               <button
                 type="submit"
-                className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
+                className="rounded-xl bg-[#0b2e59] px-4 py-2 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#123c73] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
               >
                 Send
               </button>
@@ -662,7 +665,7 @@ export default function VolunteerDashboardPage() {
           <p className="mb-3 text-sm text-slate-600">Rules-based recommendations matched by your interests and skills.</p>
           <div className="space-y-3">
             {recommendations.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
+              <div className="rounded-2xl border border-dashed border-[#d8cec5] bg-[#faf7f2] p-6 text-center">
                 <p className="text-base font-semibold text-slate-800">No recommendations yet</p>
                 <p className="mt-1 text-sm text-slate-600">
                   Add more skills and interests to unlock personalized opportunities.
@@ -672,14 +675,14 @@ export default function VolunteerDashboardPage() {
               recommendations.map((project) => (
                 <article
                   key={String(project.id)}
-                  className="rounded-2xl border border-slate-200 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-sm"
+                  className="rounded-2xl border border-[#e9e0d4] p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-[#d8cec5] hover:shadow-sm"
                 >
                   <h3 className="font-semibold">{project.title}</h3>
                   <p className="text-sm text-slate-600">{project.category} • {project.location}</p>
                   <button
                     type="button"
                     onClick={() => void onJoinProject(String(project.id))}
-                    className="mt-2 rounded-xl bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
+                    className="mt-2 rounded-xl bg-[#0b2e59] px-3 py-1.5 text-xs font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#123c73] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
                   >
                     Join Opportunity
                   </button>
@@ -696,7 +699,7 @@ export default function VolunteerDashboardPage() {
         <SectionCard title="Events">
           <div className="space-y-3">
             {events.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
+              <div className="rounded-2xl border border-dashed border-[#d8cec5] bg-[#faf7f2] p-6 text-center">
                 <p className="text-base font-semibold text-slate-800">No upcoming events yet</p>
                 <p className="mt-1 text-sm text-slate-600">
                   Upcoming workshops, project meetings, and community events will show up here.
@@ -706,7 +709,7 @@ export default function VolunteerDashboardPage() {
               events.map((event) => (
                 <article
                   key={String(event.id)}
-                  className="rounded-2xl border border-slate-200 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-sm"
+                  className="rounded-2xl border border-[#e9e0d4] p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-[#d8cec5] hover:shadow-sm"
                 >
                   <h3 className="font-semibold">{event.title}</h3>
                   <p className="flex items-center gap-1 text-sm text-slate-600">
@@ -718,7 +721,7 @@ export default function VolunteerDashboardPage() {
                   <button
                     type="button"
                     onClick={() => void onRsvpEvent(String(event.id))}
-                    className="mt-2 rounded-xl border border-slate-300 px-3 py-1.5 text-xs font-semibold transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
+                    className="mt-2 rounded-xl border border-[#d8cec5] px-3 py-1.5 text-xs font-semibold transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
                   >
                     RSVP
                   </button>
@@ -734,24 +737,24 @@ export default function VolunteerDashboardPage() {
       return (
         <SectionCard title="Impact Reports">
           <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-2xl border border-slate-200 p-4 transition-all duration-200 hover:border-slate-300 hover:shadow-sm">
+            <div className="rounded-2xl border border-[#e9e0d4] p-4 transition-all duration-200 hover:border-[#d8cec5] hover:shadow-sm">
               <p className="text-xs uppercase text-slate-500">Hours contributed</p>
               <p className="mt-1 text-2xl font-black">{Number.isInteger(totalHours) ? totalHours : totalHours.toFixed(1)}h</p>
             </div>
-            <div className="rounded-2xl border border-slate-200 p-4 transition-all duration-200 hover:border-slate-300 hover:shadow-sm">
+            <div className="rounded-2xl border border-[#e9e0d4] p-4 transition-all duration-200 hover:border-[#d8cec5] hover:shadow-sm">
               <p className="text-xs uppercase text-slate-500">Completed projects</p>
               <p className="mt-1 text-2xl font-black">{completedProjects.length}</p>
             </div>
-            <div className="rounded-2xl border border-slate-200 p-4 transition-all duration-200 hover:border-slate-300 hover:shadow-sm">
+            <div className="rounded-2xl border border-[#e9e0d4] p-4 transition-all duration-200 hover:border-[#d8cec5] hover:shadow-sm">
               <p className="text-xs uppercase text-slate-500">Impact score</p>
               <p className="mt-1 text-2xl font-black">{profile.impactScore}</p>
             </div>
-            <div className="rounded-2xl border border-slate-200 p-4 transition-all duration-200 hover:border-slate-300 hover:shadow-sm">
+            <div className="rounded-2xl border border-[#e9e0d4] p-4 transition-all duration-200 hover:border-[#d8cec5] hover:shadow-sm">
               <p className="text-xs uppercase text-slate-500">Badges earned</p>
               <p className="mt-1 text-2xl font-black">{(profile.badgesEarned || []).length}</p>
             </div>
           </div>
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <div className="rounded-2xl border border-[#e9e0d4] bg-[#faf7f2] p-4">
             <div className="mb-2 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-slate-600">
               <span>Impact progress</span>
               <span>{Math.min(100, profile.impactScore)}%</span>
@@ -775,7 +778,7 @@ export default function VolunteerDashboardPage() {
       return (
         <SectionCard title="Saved Projects">
           {saved.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
+            <div className="rounded-2xl border border-dashed border-[#d8cec5] bg-[#faf7f2] p-6 text-center">
               <p className="text-base font-semibold text-slate-800">No saved opportunities yet</p>
               <p className="mt-1 text-sm text-slate-600">
                 Save projects to revisit them quickly and decide where to contribute next.
@@ -786,14 +789,14 @@ export default function VolunteerDashboardPage() {
               {saved.map((project) => (
                 <article
                   key={String(project.id)}
-                  className="rounded-2xl border border-slate-200 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-sm"
+                  className="rounded-2xl border border-[#e9e0d4] p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-[#d8cec5] hover:shadow-sm"
                 >
                   <h3 className="font-semibold">{project.title}</h3>
                   <p className="text-sm text-slate-600">{project.category} • {project.location}</p>
                   <button
                     type="button"
                     onClick={() => void onSaveProject(String(project.id))}
-                    className="mt-2 rounded-xl border border-slate-300 px-3 py-1.5 text-xs font-semibold transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
+                    className="mt-2 rounded-xl border border-[#d8cec5] px-3 py-1.5 text-xs font-semibold transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
                   >
                     Remove from saved
                   </button>
@@ -814,7 +817,7 @@ export default function VolunteerDashboardPage() {
           }}
           className="space-y-3"
         >
-          <label className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2 text-sm">
+          <label className="flex items-center justify-between rounded-xl border border-[#e9e0d4] px-3 py-2 text-sm">
             Project invites
             <input
               type="checkbox"
@@ -827,7 +830,7 @@ export default function VolunteerDashboardPage() {
               }
             />
           </label>
-          <label className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2 text-sm">
+          <label className="flex items-center justify-between rounded-xl border border-[#e9e0d4] px-3 py-2 text-sm">
             Milestone updates
             <input
               type="checkbox"
@@ -840,7 +843,7 @@ export default function VolunteerDashboardPage() {
               }
             />
           </label>
-          <label className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2 text-sm">
+          <label className="flex items-center justify-between rounded-xl border border-[#e9e0d4] px-3 py-2 text-sm">
             Badge alerts
             <input
               type="checkbox"
@@ -853,7 +856,7 @@ export default function VolunteerDashboardPage() {
               }
             />
           </label>
-          <label className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2 text-sm">
+          <label className="flex items-center justify-between rounded-xl border border-[#e9e0d4] px-3 py-2 text-sm">
             Message alerts
             <input
               type="checkbox"
@@ -872,7 +875,7 @@ export default function VolunteerDashboardPage() {
   };
 
   return (
-    <main className={`min-h-screen ${missionClasses} text-slate-900`}>
+    <main className={`min-h-screen ${missionClasses} text-[#122a3f]`}>
       <Sidebar
         navItems={sidebarNav}
         activeItem={activeSection}
@@ -909,20 +912,20 @@ export default function VolunteerDashboardPage() {
           ) : null}
 
           <div className="mb-4 flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">
+            <span className="inline-flex items-center gap-1 rounded-full border border-[#e9e0d4] bg-white px-3 py-1 text-xs font-semibold text-slate-700">
               <Bell className="h-3.5 w-3.5" /> {unreadNotifications} unread notifications
             </span>
             <button
               type="button"
               onClick={() => setShowContributionModal(true)}
-              className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-100"
+              className="inline-flex items-center gap-1 rounded-full border border-[#e9e0d4] bg-white px-3 py-1 text-xs font-semibold transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-100"
             >
               <CheckCircle2 className="h-3.5 w-3.5" /> Log activity
             </button>
             <button
               type="button"
               onClick={() => void onSignOut()}
-              className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
+              className="inline-flex items-center gap-1 rounded-full border border-[#d8cec5] bg-white px-3 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
             >
               <LogOut className="h-3.5 w-3.5" /> Sign out
             </button>
@@ -956,7 +959,7 @@ export default function VolunteerDashboardPage() {
           <SectionCard title="Notifications">
             <div className="space-y-2">
               {notifications.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
+                <div className="rounded-2xl border border-dashed border-[#d8cec5] bg-[#faf7f2] p-6 text-center">
                   <p className="text-base font-semibold text-slate-800">No notifications yet</p>
                   <p className="mt-1 text-sm text-slate-600">
                     Project updates, milestone alerts, and team messages will appear here.
@@ -966,7 +969,7 @@ export default function VolunteerDashboardPage() {
                 notifications.map((n) => (
                   <div
                     key={n.id}
-                    className="flex items-center justify-between rounded-xl border border-slate-200 p-3 transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-sm"
+                    className="flex items-center justify-between rounded-xl border border-[#e9e0d4] p-3 transition-all duration-200 hover:-translate-y-0.5 hover:border-[#d8cec5] hover:shadow-sm"
                   >
                     <div>
                       <p className="text-sm font-semibold">{n.title}</p>
@@ -976,7 +979,7 @@ export default function VolunteerDashboardPage() {
                       <button
                         type="button"
                         onClick={() => void onMarkNotificationRead(n.id)}
-                        className="rounded-lg border border-slate-300 px-2 py-1 text-xs transition-all duration-200 hover:bg-slate-100"
+                        className="rounded-lg border border-[#d8cec5] px-2 py-1 text-xs transition-all duration-200 hover:bg-slate-100"
                       >
                         Mark read
                       </button>
@@ -1008,7 +1011,7 @@ export default function VolunteerDashboardPage() {
           <form onSubmit={handleProfileSubmit} className="w-full max-w-lg rounded-2xl bg-white p-5">
             <h3 className="mb-4 text-xl font-bold">Edit Volunteer Profile</h3>
             <div className="space-y-2">
-              <div className="rounded-xl border border-slate-200 p-3">
+              <div className="rounded-xl border border-[#e9e0d4] p-3">
                 <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
                   Profile photo
                 </p>
@@ -1046,13 +1049,13 @@ export default function VolunteerDashboardPage() {
                         );
                       });
                   }}
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                  className="w-full rounded-xl border border-[#e9e0d4] px-3 py-2 text-sm"
                 />
                 {profileDraft.photoUrl ? (
                   <button
                     type="button"
                     onClick={() => setProfileDraft((prev) => ({ ...prev, photoUrl: "" }))}
-                    className="mt-2 rounded-lg border border-slate-300 px-2 py-1 text-xs font-semibold"
+                    className="mt-2 rounded-lg border border-[#d8cec5] px-2 py-1 text-xs font-semibold"
                   >
                     Remove photo
                   </button>
@@ -1064,32 +1067,32 @@ export default function VolunteerDashboardPage() {
               <input
                 value={profileDraft.displayName}
                 onChange={(e) => setProfileDraft((prev) => ({ ...prev, displayName: e.target.value }))}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2"
+                className="w-full rounded-xl border border-[#e9e0d4] px-3 py-2"
                 placeholder="Full name"
               />
               <textarea
                 value={profileDraft.bio}
                 onChange={(e) => setProfileDraft((prev) => ({ ...prev, bio: e.target.value }))}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2"
+                className="w-full rounded-xl border border-[#e9e0d4] px-3 py-2"
                 rows={3}
                 placeholder="Mission-aligned bio"
               />
               <input
                 value={profileDraft.location}
                 onChange={(e) => setProfileDraft((prev) => ({ ...prev, location: e.target.value }))}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2"
+                className="w-full rounded-xl border border-[#e9e0d4] px-3 py-2"
                 placeholder="Location"
               />
               <input
                 value={profileDraft.skills}
                 onChange={(e) => setProfileDraft((prev) => ({ ...prev, skills: e.target.value }))}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2"
+                className="w-full rounded-xl border border-[#e9e0d4] px-3 py-2"
                 placeholder="Skills (comma separated)"
               />
               <input
                 value={profileDraft.interests}
                 onChange={(e) => setProfileDraft((prev) => ({ ...prev, interests: e.target.value }))}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2"
+                className="w-full rounded-xl border border-[#e9e0d4] px-3 py-2"
                 placeholder="Interests (comma separated)"
               />
             </div>
@@ -1097,7 +1100,7 @@ export default function VolunteerDashboardPage() {
               <button type="button" onClick={() => setShowProfileEditor(false)} className="rounded-xl border px-3 py-2 text-sm">
                 Cancel
               </button>
-              <button type="submit" className="rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white">
+              <button type="submit" className="rounded-xl bg-[#0b2e59] px-3 py-2 text-sm font-semibold text-white">
                 Save profile
               </button>
             </div>
@@ -1113,7 +1116,7 @@ export default function VolunteerDashboardPage() {
               <select
                 value={contributionDraft.projectId}
                 onChange={(e) => setContributionDraft((prev) => ({ ...prev, projectId: e.target.value }))}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2"
+                className="w-full rounded-xl border border-[#e9e0d4] px-3 py-2"
               >
                 <option value="">Select project</option>
                 {activeProjects.map((project) => (
@@ -1128,13 +1131,13 @@ export default function VolunteerDashboardPage() {
                 min="0.5"
                 value={contributionDraft.hours}
                 onChange={(e) => setContributionDraft((prev) => ({ ...prev, hours: e.target.value }))}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2"
+                className="w-full rounded-xl border border-[#e9e0d4] px-3 py-2"
                 placeholder="Hours"
               />
               <textarea
                 value={contributionDraft.notes}
                 onChange={(e) => setContributionDraft((prev) => ({ ...prev, notes: e.target.value }))}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2"
+                className="w-full rounded-xl border border-[#e9e0d4] px-3 py-2"
                 rows={3}
                 placeholder="Contribution details"
               />
@@ -1153,7 +1156,7 @@ export default function VolunteerDashboardPage() {
               <button type="button" onClick={() => setShowContributionModal(false)} className="rounded-xl border px-3 py-2 text-sm">
                 Cancel
               </button>
-              <button type="submit" className="rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white">
+              <button type="submit" className="rounded-xl bg-[#0b2e59] px-3 py-2 text-sm font-semibold text-white">
                 Save contribution
               </button>
             </div>
@@ -1162,7 +1165,7 @@ export default function VolunteerDashboardPage() {
       ) : null}
 
       {isBusy ? (
-        <div className="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow">
+        <div className="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 rounded-full border border-[#d8cec5] bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow">
           <Loader2 className="mr-2 inline h-4 w-4 animate-spin" /> Processing...
         </div>
       ) : null}

@@ -14,7 +14,7 @@ const tabs: { id: DashboardTab; label: string }[] = [
 
 export default function TabNav({ activeTab, onTabChange }: TabNavProps) {
   return (
-    <div role="tablist" aria-label="Dashboard sections" className="mb-6 flex flex-wrap gap-2 border-b border-slate-200 pb-3">
+    <div role="tablist" aria-label="Dashboard sections" className="mb-6 flex flex-wrap gap-2 border-b border-[#e9e0d4] pb-3">
       {tabs.map((tab) => {
         const selected = activeTab === tab.id;
         return (
@@ -26,7 +26,7 @@ export default function TabNav({ activeTab, onTabChange }: TabNavProps) {
             onClick={() => onTabChange(tab.id)}
             className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
               selected
-                ? "bg-slate-900 text-white"
+                ? "bg-[#0b2e59] text-white"
                 : "bg-white text-slate-600 hover:bg-slate-100"
             }`}
           >
