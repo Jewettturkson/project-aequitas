@@ -321,7 +321,8 @@ export async function getUserProfile(uid: string) {
 }
 
 export async function listProjects() {
-  return listCollection<ProjectDoc>('projects');
+  const all = await listCollection<ProjectDoc>('projects');
+  return all.filter((project) => !isSyntheticProject(project));
 }
 
 export async function listVolunteers() {
@@ -594,6 +595,24 @@ export async function evaluateAndAwardBadges(uid: string) {
   }
 }
 
+
+// Synthetic seed fingerprints from all historical app versions. Used to purge
+// and to filter reads, so legacy demo data can never surface as real activity.
+const SEED_PROJECT_TITLES = [
+  'Neighborhood Tree Renewal',
+  'Youth STEM Tutor Circles',
+  'Community Digital Help Desk',
+  'Community Garden Revival',
+  'Digital Literacy Workshops',
+];
+
+function isSyntheticProject(project: { title?: string; pilotData?: boolean; organizationId?: string }) {
+  if (project.pilotData) return true;
+  if (project.organizationId && project.organizationId.startsWith('org_enturk_')) return true;
+  if (project.title && SEED_PROJECT_TITLES.includes(project.title)) return true;
+  return false;
+}
+
 export async function seedIfEmpty(uid: string, email: string, displayName: string) {
   const profile = await getUserProfile(uid);
   if (!profile) {
@@ -623,10 +642,14 @@ export async function seedIfEmpty(uid: string, email: string, displayName: strin
 
   // Real-data policy: remove any synthetic pilot projects seeded by earlier
   // versions, and never seed fake data again. Dashboards reflect real activity.
-  const existing = await listProjects();
+  const existing = await listCollection<ProjectDoc>('projects');
   for (const project of existing) {
-    if ((project as ProjectDoc & { pilotData?: boolean }).pilotData) {
-      await deleteDocument('projects', project.id);
+    if (isSyntheticProject(project as ProjectDoc & { pilotData?: boolean; organizationId?: string })) {
+      try {
+        await deleteDocument('projects', project.id);
+      } catch {
+        // deletion blocked (e.g. security rules): reads filter it out anyway
+      }
     }
   }
   return;
