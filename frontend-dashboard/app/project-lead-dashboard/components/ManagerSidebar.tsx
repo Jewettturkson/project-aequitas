@@ -28,7 +28,7 @@ export default function ManagerSidebar({
     <aside className="rounded-3xl bg-[#06163a] p-4 text-white shadow-xl lg:sticky lg:top-6 lg:h-[calc(100vh-3rem)] lg:flex lg:flex-col">
       <div className="rounded-2xl border border-white/15 bg-white/5 px-4 py-5">
         <div className="mx-auto h-[74px] w-full max-w-[220px]">
-          <BrandLogo variant="auto" className="h-full w-full" priority />
+          <BrandLogo variant="auto" className="h-full w-full" onDark priority />
         </div>
       </div>
       <div className="mt-4 rounded-2xl border border-white/15 bg-white/10 px-4 py-4">

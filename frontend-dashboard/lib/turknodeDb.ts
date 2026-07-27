@@ -539,7 +539,9 @@ export async function updateNotificationPrefs(uid: string, prefs: UserProfileDoc
 
 export async function listEvents() {
   const all = await listCollection<EventDoc>('events');
-  return all.sort((a, b) => String(a.startsAt).localeCompare(String(b.startsAt)));
+  return all
+    .filter((event) => !isSyntheticEvent(event as EventDoc & { pilotData?: boolean }))
+    .sort((a, b) => String(a.startsAt).localeCompare(String(b.startsAt)));
 }
 
 export async function rsvpToEvent(uid: string, eventId: string) {
@@ -606,6 +608,13 @@ const SEED_PROJECT_TITLES = [
   'Digital Literacy Workshops',
 ];
 
+const SEED_EVENT_TITLES = ['Spring River Cleanup', 'Volunteer Mentor Onboarding'];
+const SEED_TASK_TITLES = ['Confirm volunteer check-in plan'];
+
+function isSyntheticEvent(event: { title?: string; pilotData?: boolean }) {
+  return Boolean(event.pilotData) || (event.title ? SEED_EVENT_TITLES.includes(event.title) : false);
+}
+
 function isSyntheticProject(project: { title?: string; pilotData?: boolean; organizationId?: string }) {
   if (project.pilotData) return true;
   if (project.organizationId && project.organizationId.startsWith('org_enturk_')) return true;
@@ -649,6 +658,16 @@ export async function seedIfEmpty(uid: string, email: string, displayName: strin
         await deleteDocument('projects', project.id);
       } catch {
         // deletion blocked (e.g. security rules): reads filter it out anyway
+      }
+    }
+  }
+  const existingEvents = await listCollection<EventDoc>('events');
+  for (const eventDoc of existingEvents) {
+    if (isSyntheticEvent(eventDoc as EventDoc & { pilotData?: boolean })) {
+      try {
+        await deleteDocument('events', eventDoc.id);
+      } catch {
+        // reads filter it out anyway
       }
     }
   }

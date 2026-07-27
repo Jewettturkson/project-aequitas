@@ -332,8 +332,8 @@ export default function ProjectLeadDashboardPage() {
 
   if (authStatus === "loading") {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#F6F7F5]">
-        <div className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700">
+      <main className="flex min-h-screen items-center justify-center bg-[#faf7f2]">
+        <div className="inline-flex items-center gap-2 rounded-full border border-[#d8cec5] bg-white px-4 py-2 text-sm font-semibold text-slate-700">
           <Loader2 className="h-4 w-4 animate-spin" /> Loading project lead workspace...
         </div>
       </main>
@@ -342,7 +342,7 @@ export default function ProjectLeadDashboardPage() {
 
   if (authStatus === "unavailable") {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#F6F7F5] p-6 text-center">
+      <main className="flex min-h-screen items-center justify-center bg-[#faf7f2] p-6 text-center">
         <div className="rounded-2xl border border-amber-200 bg-white p-6">
           <p className="text-slate-800">Firebase auth is unavailable in this environment.</p>
         </div>
@@ -352,13 +352,13 @@ export default function ProjectLeadDashboardPage() {
 
   if (!profile) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#F6F7F5] p-6 text-center">
-        <div className="rounded-2xl border border-slate-200 bg-white p-6">
+      <main className="flex min-h-screen items-center justify-center bg-[#faf7f2] p-6 text-center">
+        <div className="rounded-2xl border border-[#e9e0d4] bg-white p-6">
           <p className="mb-3 text-slate-700">No active session. Please sign in as a project lead.</p>
           <button
             type="button"
             onClick={() => router.push("/?next=/project-lead-dashboard")}
-            className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
+            className="rounded-xl bg-[#0b2e59] px-4 py-2 text-sm font-semibold text-white"
           >
             Return to sign in
           </button>
@@ -368,12 +368,12 @@ export default function ProjectLeadDashboardPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#F6F7F5] p-4 md:p-6">
+    <main className="min-h-screen bg-[#faf7f2] p-4 md:p-6">
       <div className="mx-auto max-w-[1500px] lg:grid lg:grid-cols-[280px_minmax(0,1fr)] lg:gap-6">
         <button
           type="button"
           onClick={() => setSidebarOpen((prev) => !prev)}
-          className="mb-3 inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 lg:hidden"
+          className="mb-3 inline-flex items-center gap-2 rounded-xl border border-[#d8cec5] bg-white px-3 py-2 text-sm font-semibold text-slate-700 lg:hidden"
         >
           {sidebarOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />} Menu
         </button>
@@ -400,7 +400,7 @@ export default function ProjectLeadDashboardPage() {
                   key={item}
                   onClick={() => setTab(item)}
                   className={`rounded-full px-3 py-1.5 text-sm font-semibold transition ${
-                    tab === item ? "bg-[#0b1a37] text-white" : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                    tab === item ? "bg-[#0b1a37] text-white" : "border border-[#d8cec5] bg-white text-slate-700 hover:bg-[#faf7f2]"
                   }`}
                 >
                   {item[0].toUpperCase() + item.slice(1)}
@@ -411,7 +411,7 @@ export default function ProjectLeadDashboardPage() {
             <button
               type="button"
               onClick={() => void handleSignOut()}
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              className="inline-flex items-center gap-2 rounded-xl border border-[#d8cec5] bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-[#faf7f2]"
             >
               <LogOut className="h-4 w-4" /> Sign out
             </button>
@@ -474,17 +474,17 @@ export default function ProjectLeadDashboardPage() {
               )}
 
               {activeSection === "settings" ? (
-                <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-                  <h3 className="text-xl font-black tracking-tight text-slate-900">Manager Settings</h3>
+                <section className="rounded-3xl border border-[#e9e0d4] bg-white p-5 shadow-sm">
+                  <h3 className="text-xl font-black tracking-tight text-[#122a3f]">Manager Settings</h3>
                   <p className="mt-2 text-sm text-slate-600">
                     Configure communication preferences, notification cadence, and partner reporting defaults.
                   </p>
                   <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                    <label className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2 text-sm">
+                    <label className="flex items-center justify-between rounded-xl border border-[#e9e0d4] px-3 py-2 text-sm">
                       Application alerts
                       <input type="checkbox" defaultChecked />
                     </label>
-                    <label className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2 text-sm">
+                    <label className="flex items-center justify-between rounded-xl border border-[#e9e0d4] px-3 py-2 text-sm">
                       Deadline reminders
                       <input type="checkbox" defaultChecked />
                     </label>
@@ -496,8 +496,8 @@ export default function ProjectLeadDashboardPage() {
             <div className="space-y-5">
               <QuickActions onCreateProject={() => formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })} />
 
-              <section ref={formRef} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-                <h3 className="text-xl font-black tracking-tight text-slate-900">Create Project</h3>
+              <section ref={formRef} className="rounded-3xl border border-[#e9e0d4] bg-white p-5 shadow-sm">
+                <h3 className="text-xl font-black tracking-tight text-[#122a3f]">Create Project</h3>
                 <p className="mt-1 text-sm text-slate-600">Publish roles, receive applicants, and start coordination.</p>
 
                 <form onSubmit={handleCreateProject} className="mt-4 space-y-3">
@@ -505,24 +505,24 @@ export default function ProjectLeadDashboardPage() {
                     value={form.title}
                     onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))}
                     placeholder="Project title"
-                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm"
+                    className="w-full rounded-xl border border-[#d8cec5] bg-white px-3 py-2.5 text-sm"
                     required
                   />
                   <textarea
                     value={form.description}
                     onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
                     placeholder="Description"
-                    className="h-24 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm"
+                    className="h-24 w-full rounded-xl border border-[#d8cec5] bg-white px-3 py-2.5 text-sm"
                     required
                   />
                   <div className="grid gap-3 sm:grid-cols-2">
-                    <input value={form.category} onChange={(event) => setForm((prev) => ({ ...prev, category: event.target.value }))} placeholder="Category" className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm" required />
-                    <input value={form.location} onChange={(event) => setForm((prev) => ({ ...prev, location: event.target.value }))} placeholder="Location" className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm" required />
-                    <input type="date" value={form.startDate} onChange={(event) => setForm((prev) => ({ ...prev, startDate: event.target.value }))} className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm" required />
-                    <input type="date" value={form.endDate} onChange={(event) => setForm((prev) => ({ ...prev, endDate: event.target.value }))} className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm" required />
+                    <input value={form.category} onChange={(event) => setForm((prev) => ({ ...prev, category: event.target.value }))} placeholder="Category" className="w-full rounded-xl border border-[#d8cec5] bg-white px-3 py-2.5 text-sm" required />
+                    <input value={form.location} onChange={(event) => setForm((prev) => ({ ...prev, location: event.target.value }))} placeholder="Location" className="w-full rounded-xl border border-[#d8cec5] bg-white px-3 py-2.5 text-sm" required />
+                    <input type="date" value={form.startDate} onChange={(event) => setForm((prev) => ({ ...prev, startDate: event.target.value }))} className="w-full rounded-xl border border-[#d8cec5] bg-white px-3 py-2.5 text-sm" required />
+                    <input type="date" value={form.endDate} onChange={(event) => setForm((prev) => ({ ...prev, endDate: event.target.value }))} className="w-full rounded-xl border border-[#d8cec5] bg-white px-3 py-2.5 text-sm" required />
                   </div>
-                  <input value={form.skillsRequired} onChange={(event) => setForm((prev) => ({ ...prev, skillsRequired: event.target.value }))} placeholder="Skills required (comma separated)" className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm" />
-                  <input value={form.impactMetric} onChange={(event) => setForm((prev) => ({ ...prev, impactMetric: event.target.value }))} placeholder="Impact metric" className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm" />
+                  <input value={form.skillsRequired} onChange={(event) => setForm((prev) => ({ ...prev, skillsRequired: event.target.value }))} placeholder="Skills required (comma separated)" className="w-full rounded-xl border border-[#d8cec5] bg-white px-3 py-2.5 text-sm" />
+                  <input value={form.impactMetric} onChange={(event) => setForm((prev) => ({ ...prev, impactMetric: event.target.value }))} placeholder="Impact metric" className="w-full rounded-xl border border-[#d8cec5] bg-white px-3 py-2.5 text-sm" />
                   <button
                     type="submit"
                     disabled={isBusy}

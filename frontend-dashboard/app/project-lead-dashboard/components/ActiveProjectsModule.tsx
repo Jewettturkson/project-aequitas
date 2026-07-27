@@ -17,16 +17,16 @@ export default function ActiveProjectsModule({
   onAction?: (projectId: string, action: 'view' | 'edit' | 'assign' | 'tasks') => void;
 }) {
   return (
-    <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+    <section className="rounded-3xl border border-[#e9e0d4] bg-white p-5 shadow-sm">
       <div className="mb-4 flex items-center justify-between gap-3">
-        <h3 className="text-2xl font-black tracking-tight text-slate-900">Active Projects</h3>
-        <button className="rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50">
+        <h3 className="text-2xl font-black tracking-tight text-[#122a3f]">Active Projects</h3>
+        <button className="rounded-xl border border-[#d8cec5] bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-[#faf7f2]">
           View all
         </button>
       </div>
 
       {projects.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-sm text-slate-600">
+        <p className="rounded-xl border border-dashed border-[#d8cec5] bg-[#faf7f2] px-4 py-5 text-sm text-slate-600">
           No active initiatives yet. Create a project to start recruiting volunteers.
         </p>
       ) : (
@@ -34,11 +34,11 @@ export default function ActiveProjectsModule({
           {projects.map((project) => {
             const progress = calculateProgress(project.startDate, project.endDate);
             return (
-              <article key={project.id} className="rounded-2xl border border-slate-200 p-4">
+              <article key={project.id} className="rounded-2xl border border-[#e9e0d4] p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{project.category}</p>
-                    <h4 className="text-lg font-bold text-slate-900">{project.title}</h4>
+                    <h4 className="text-lg font-bold text-[#122a3f]">{project.title}</h4>
                     <p className="mt-1 text-sm text-slate-600">{project.description}</p>
                   </div>
                   <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">
@@ -49,19 +49,19 @@ export default function ActiveProjectsModule({
                 <div className="mt-3 grid gap-3 text-xs text-slate-600 md:grid-cols-4">
                   <div>
                     <p className="uppercase tracking-wide text-slate-500">Volunteers</p>
-                    <p className="mt-1 font-semibold text-slate-900">{project.participantCount || 0} assigned</p>
+                    <p className="mt-1 font-semibold text-[#122a3f]">{project.participantCount || 0} assigned</p>
                   </div>
                   <div>
                     <p className="uppercase tracking-wide text-slate-500">Next milestone</p>
-                    <p className="mt-1 font-semibold text-slate-900">Field readiness check</p>
+                    <p className="mt-1 font-semibold text-[#122a3f]">Field readiness check</p>
                   </div>
                   <div>
                     <p className="uppercase tracking-wide text-slate-500">Deadline</p>
-                    <p className="mt-1 font-semibold text-slate-900">{project.endDate || 'TBD'}</p>
+                    <p className="mt-1 font-semibold text-[#122a3f]">{project.endDate || 'TBD'}</p>
                   </div>
                   <div>
                     <p className="uppercase tracking-wide text-slate-500">Progress</p>
-                    <p className="mt-1 font-semibold text-slate-900">{progress}%</p>
+                    <p className="mt-1 font-semibold text-[#122a3f]">{progress}%</p>
                   </div>
                 </div>
 
@@ -80,7 +80,7 @@ export default function ActiveProjectsModule({
                       key={label}
                       type="button"
                       onClick={() => onAction?.(project.id, action)}
-                      className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                      className="rounded-lg border border-[#d8cec5] bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-[#faf7f2]"
                     >
                       {label}
                     </button>

@@ -19,20 +19,20 @@ export default function ImpactAnalytics({
   const chartBars = [62, 74, 58, 83, 91, 77];
 
   return (
-    <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-      <h3 className="text-xl font-black tracking-tight text-slate-900">Impact Analytics</h3>
+    <section className="rounded-3xl border border-[#e9e0d4] bg-white p-5 shadow-sm">
+      <h3 className="text-xl font-black tracking-tight text-[#122a3f]">Impact Analytics</h3>
       <p className="mt-1 text-sm text-slate-600">Proof of mission outcomes across community initiatives.</p>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {metrics.map((metric) => (
-          <article key={metric.label} className="rounded-2xl border border-slate-200 p-3">
+          <article key={metric.label} className="rounded-2xl border border-[#e9e0d4] p-3">
             <p className="text-xs uppercase tracking-wide text-slate-500">{metric.label}</p>
-            <p className="mt-1 text-2xl font-black text-slate-900">{metric.value}</p>
+            <p className="mt-1 text-2xl font-black text-[#122a3f]">{metric.value}</p>
           </article>
         ))}
       </div>
 
-      <div className="mt-4 rounded-2xl border border-slate-200 p-4">
+      <div className="mt-4 rounded-2xl border border-[#e9e0d4] p-4">
         <p className="text-sm font-semibold text-slate-700">Monthly initiative momentum</p>
         <div className="mt-3 flex h-28 items-end gap-2">
           {chartBars.map((height, idx) => (
