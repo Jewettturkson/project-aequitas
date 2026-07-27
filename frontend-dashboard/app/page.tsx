@@ -1205,14 +1205,55 @@ export default function Page() {
           </div>
         </header>
 
-        <section className="relative z-10 mx-auto grid w-full max-w-7xl gap-10 px-6 pb-10 pt-2 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
+        <section className="relative z-10 px-0 md:px-6">
+          <div className="relative mx-auto h-[80vh] min-h-[540px] w-full max-w-[1600px] overflow-hidden md:rounded-[2.5rem]">
+            <img
+              src="https://images.unsplash.com/photo-1593113598332-cd288d649433?auto=format&fit=crop&w=2000&q=75"
+              alt="Volunteers unloading supplies together"
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#04101f]/90 via-[#04101f]/30 to-black/10" />
+            <div className="absolute inset-x-0 bottom-0 max-w-4xl p-8 md:p-14">
+              <p className="mb-4 text-xs font-bold uppercase tracking-[0.25em] text-emerald-300">
+                ENTURK · Community impact platform
+              </p>
+              <h1 className="text-5xl font-black leading-[1.0] tracking-tight text-white md:text-7xl">
+                The work is real.
+                <br />
+                So are the hands.
+              </h1>
+              <p className="mt-5 max-w-xl text-lg leading-relaxed text-white/85 md:text-xl">
+                TurkNode matches skilled volunteers to sustainability, education, and civic
+                projects that need them, this week, where they live.
+              </p>
+              <div className="mt-8 flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={() => scrollToLandingSection("projects")}
+                  className="rounded-full bg-emerald-500 px-7 py-3.5 text-base font-bold text-[#04240f] transition hover:bg-emerald-400"
+                >
+                  See open projects
+                </button>
+                <button
+                  type="button"
+                  onClick={() => scrollToLandingSection("join")}
+                  className="rounded-full border-2 border-white/70 px-7 py-3.5 text-base font-bold text-white transition hover:bg-white/10"
+                >
+                  Join TurkNode
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="join" className="relative z-10 mx-auto grid w-full max-w-7xl scroll-mt-24 gap-10 px-6 pb-10 pt-16 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
           <div>
             <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-600/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-700">
               Community impact platform
             </p>
-            <h1 className="max-w-2xl text-5xl font-black leading-[1.02] tracking-tight text-[#0b2e59] md:text-7xl">
-              Show up for your <span className="text-emerald-600">community.</span>
-            </h1>
+            <h2 className="max-w-2xl text-4xl font-black leading-[1.05] tracking-tight text-[#0b2e59] md:text-5xl">
+              Your skills have a <span className="text-emerald-600">home here.</span>
+            </h2>
             <p className="mt-5 max-w-xl text-lg text-[#5b6b7a] md:text-xl">
               TurkNode matches your skills to sustainability, education, and civic projects that
               need you, this week, where you live.
@@ -1340,13 +1381,24 @@ export default function Page() {
 
         <section id="mission" className="relative z-10 mx-auto w-full max-w-7xl scroll-mt-20 px-6 py-14">
           <div className="rounded-3xl border border-[#e7ded2] bg-white p-7 shadow-sm md:p-10">
-            <h2 className="text-3xl font-black tracking-tight md:text-4xl">Our Mission</h2>
-            <p className="mt-3 max-w-3xl text-lg text-[#5b6b7a]">
-              Empowering communities through technology, volunteerism, and measurable impact.
-            </p>
-            <p className="mt-4 max-w-4xl text-sm leading-7 text-[#5b6b7a]">
-              TurkNode is a community platform designed to connect skilled volunteers with meaningful projects in sustainability, education, and civic innovation. We believe real change happens when people collaborate locally with the right tools, shared effort, and measurable outcomes.
-            </p>
+            <div className="grid gap-8 md:grid-cols-[1fr_1.1fr] md:items-center">
+              <div className="relative h-64 overflow-hidden rounded-2xl md:h-80">
+                <img
+                  src="https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=1200&q=75"
+                  alt="Hands planting a seedling"
+                  className="absolute inset-0 h-full w-full object-cover"
+                />
+              </div>
+              <div>
+                <h2 className="text-3xl font-black tracking-tight text-[#0b2e59] md:text-4xl">Our Mission</h2>
+                <p className="mt-3 text-lg text-[#5b6b7a]">
+                  Empowering communities through technology, volunteerism, and measurable impact.
+                </p>
+                <p className="mt-4 text-sm leading-7 text-[#5b6b7a]">
+                  TurkNode is a community platform designed to connect skilled volunteers with meaningful projects in sustainability, education, and civic innovation. We believe real change happens when people collaborate locally with the right tools, shared effort, and measurable outcomes.
+                </p>
+              </div>
+            </div>
             <div className="mt-7 grid gap-4 md:grid-cols-3">
               {[
                 {
@@ -1387,6 +1439,7 @@ export default function Page() {
                   description:
                     "Help restore urban green spaces through community tree planting and environmental stewardship.",
                   category: "Environment",
+                  photo: "https://images.unsplash.com/photo-1466692476868-aef1dfb1e735?auto=format&fit=crop&w=1000&q=70",
                   impact: "340 trees planted",
                   have: 24,
                   need: 30,
@@ -1396,6 +1449,7 @@ export default function Page() {
                   description:
                     "Support students through tutoring and mentorship programs led by volunteer educators.",
                   category: "Education",
+                  photo: "https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=1000&q=70",
                   impact: "120 students supported",
                   have: 18,
                   need: 25,
@@ -1405,6 +1459,7 @@ export default function Page() {
                   description:
                     "Provide technical assistance and digital literacy training for underserved communities.",
                   category: "Technology",
+                  photo: "https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&w=1000&q=70",
                   impact: "75 households reached",
                   have: 12,
                   need: 20,
@@ -1412,12 +1467,16 @@ export default function Page() {
               ].map((project) => (
                 <article
                   key={project.title}
-                  className="rounded-2xl border border-[#eee3d4] bg-[#fdfbf7] p-5 transition hover:-translate-y-0.5 hover:shadow-md"
+                  className="overflow-hidden rounded-2xl border border-[#eee3d4] bg-white transition hover:-translate-y-0.5 hover:shadow-lg"
                 >
-                  <span className="inline-flex rounded-full border border-emerald-600/25 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-700">
-                    {project.category}
-                  </span>
-                  <h3 className="mt-3 text-xl font-bold">{project.title}</h3>
+                  <div className="relative h-44 w-full">
+                    <img src={project.photo} alt={project.title} className="absolute inset-0 h-full w-full object-cover" />
+                    <span className="absolute left-3 top-3 inline-flex rounded-full bg-white/95 px-2.5 py-1 text-xs font-bold text-emerald-700 shadow">
+                      {project.category}
+                    </span>
+                  </div>
+                  <div className="p-5">
+                  <h3 className="text-xl font-bold text-[#0b2e59]">{project.title}</h3>
                   <p className="mt-2 text-sm leading-6 text-[#5b6b7a]">{project.description}</p>
                   <div className="mt-4">
                     <div className="flex items-baseline justify-between text-xs">
@@ -1441,6 +1500,7 @@ export default function Page() {
                   >
                     Join this project
                   </button>
+                  </div>
                 </article>
               ))}
             </div>
@@ -1448,9 +1508,16 @@ export default function Page() {
         </section>
 
         <section id="impact" className="relative z-10 mx-auto w-full max-w-7xl scroll-mt-20 px-6 py-14">
-          <div className="rounded-3xl border border-[#e7ded2] bg-white p-7 shadow-sm md:p-10">
-            <h2 className="text-3xl font-black tracking-tight md:text-4xl">Community Impact</h2>
-            <p className="mt-3 max-w-3xl text-base text-[#5b6b7a]">
+          <div className="relative overflow-hidden rounded-3xl p-7 shadow-lg md:p-12">
+            <img
+              src="https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&w=2000&q=75"
+              alt="Community members joining hands"
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+            <div className="absolute inset-0 bg-[#04101f]/78" />
+            <div className="relative">
+            <h2 className="text-3xl font-black tracking-tight text-white md:text-4xl">Community Impact</h2>
+            <p className="mt-3 max-w-3xl text-base text-white/80">
               TurkNode tracks outcomes across active pilot initiatives and community partner programs.
             </p>
             <div className="mt-7 grid gap-4 sm:grid-cols-3">
@@ -1459,7 +1526,7 @@ export default function Page() {
                 { label: "Active initiatives", value: Math.max(stats.activeProjects, 40), accent: "text-[#0b2e59]" },
                 { label: "Volunteers onboard", value: Math.max(stats.volunteers, 1200), accent: "text-cyan-700" },
               ].map((metric) => (
-                <div key={metric.label} className="rounded-2xl border border-[#eee3d4] bg-[#fdfbf7] p-6 text-center">
+                <div key={metric.label} className="rounded-2xl bg-white/95 p-6 text-center shadow-lg backdrop-blur">
                   <p className={`text-5xl font-black tracking-tight ${metric.accent}`}>
                     <CountUp value={metric.value} />
                   </p>
@@ -1467,13 +1534,14 @@ export default function Page() {
                 </div>
               ))}
             </div>
-            <p className="mt-6 max-w-4xl text-sm leading-7 text-[#5b6b7a]">
+            <p className="mt-6 max-w-4xl text-sm leading-7 text-white/70">
               Metrics shown here represent seeded pilot reporting structures and are designed to transition to verified live reporting as partner organizations onboard.
             </p>
+            </div>
           </div>
         </section>
 
-        <section id="join" className="relative z-10 mx-auto w-full max-w-7xl scroll-mt-20 px-6 pb-6 pt-14">
+        <section id="tiers" className="relative z-10 mx-auto w-full max-w-7xl scroll-mt-20 px-6 pb-6 pt-14">
           <div className="rounded-3xl border border-[#e7ded2] bg-white p-7 shadow-sm md:p-10">
             <h2 className="text-3xl font-black tracking-tight md:text-4xl">Join TurkNode</h2>
             <p className="mt-3 max-w-3xl text-base text-[#5b6b7a]">
