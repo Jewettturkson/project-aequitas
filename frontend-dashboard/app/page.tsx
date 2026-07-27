@@ -1432,77 +1432,59 @@ export default function Page() {
             <p className="mt-3 max-w-3xl text-base text-[#5b6b7a]">
               Explore initiatives led by volunteers and organizations focused on education, sustainability, and local impact.
             </p>
-            <div className="mt-7 grid gap-4 lg:grid-cols-3">
-              {[
-                {
-                  title: "Urban Tree Stewardship",
-                  description:
-                    "Help restore urban green spaces through community tree planting and environmental stewardship.",
-                  category: "Environment",
-                  photo: "https://images.unsplash.com/photo-1466692476868-aef1dfb1e735?auto=format&fit=crop&w=1000&q=70",
-                  impact: "340 trees planted",
-                  have: 24,
-                  need: 30,
-                },
-                {
-                  title: "Neighborhood Learning Pods",
-                  description:
-                    "Support students through tutoring and mentorship programs led by volunteer educators.",
-                  category: "Education",
-                  photo: "https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=1000&q=70",
-                  impact: "120 students supported",
-                  have: 18,
-                  need: 25,
-                },
-                {
-                  title: "Digital Access Initiative",
-                  description:
-                    "Provide technical assistance and digital literacy training for underserved communities.",
-                  category: "Technology",
-                  photo: "https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&w=1000&q=70",
-                  impact: "75 households reached",
-                  have: 12,
-                  need: 20,
-                },
-              ].map((project) => (
-                <article
-                  key={project.title}
-                  className="overflow-hidden rounded-2xl border border-[#eee3d4] bg-white transition hover:-translate-y-0.5 hover:shadow-lg"
-                >
-                  <div className="relative h-44 w-full">
-                    <img src={project.photo} alt={project.title} className="absolute inset-0 h-full w-full object-cover" />
-                    <span className="absolute left-3 top-3 inline-flex rounded-full bg-white/95 px-2.5 py-1 text-xs font-bold text-emerald-700 shadow">
-                      {project.category}
-                    </span>
-                  </div>
-                  <div className="p-5">
-                  <h3 className="text-xl font-bold text-[#0b2e59]">{project.title}</h3>
-                  <p className="mt-2 text-sm leading-6 text-[#5b6b7a]">{project.description}</p>
-                  <div className="mt-4">
-                    <div className="flex items-baseline justify-between text-xs">
-                      <span className="font-semibold text-[#33475a]">{project.have} of {project.need} volunteers</span>
-                      <span className="text-[#5b6b7a]">{project.impact}</span>
-                    </div>
-                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#ece4d6]">
-                      <div
-                        className="h-full rounded-full bg-emerald-500 transition-all duration-700"
-                        style={{ width: `${Math.round((project.have / project.need) * 100)}%` }}
-                      />
-                    </div>
-                    <p className="mt-1.5 text-xs font-semibold text-emerald-700">
-                      {project.need - project.have} more needed
-                    </p>
-                  </div>
+            <div className="mt-7">
+              {openProjects.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-[#d8cec5] bg-[#fdfbf7] p-8 text-center">
+                  <p className="text-lg font-bold text-[#0b2e59]">Projects are being onboarded</p>
+                  <p className="mx-auto mt-2 max-w-md text-sm text-[#5b6b7a]">
+                    Community organizations are posting their first initiatives now. Join as a
+                    project lead to post yours, or sign up as a volunteer to be matched the moment
+                    one goes live.
+                  </p>
                   <button
                     type="button"
-                    onClick={() => startJoinFlow("volunteer")}
-                    className="mt-4 w-full rounded-xl bg-[#0b2e59] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#123c73]"
+                    onClick={() => startJoinFlow("lead")}
+                    className="mt-5 rounded-xl bg-[#0b2e59] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#123c73]"
                   >
-                    Join this project
+                    Post the first project
                   </button>
-                  </div>
-                </article>
-              ))}
+                </div>
+              ) : (
+                <div className="grid gap-4 lg:grid-cols-3">
+                  {openProjects.map((project, index) => (
+                    <article
+                      key={project.id}
+                      className="overflow-hidden rounded-2xl border border-[#eee3d4] bg-white transition hover:-translate-y-0.5 hover:shadow-lg"
+                    >
+                      <div className="relative h-40 w-full">
+                        <img
+                          src={[
+                            "https://images.unsplash.com/photo-1466692476868-aef1dfb1e735?auto=format&fit=crop&w=1000&q=70",
+                            "https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=1000&q=70",
+                            "https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&w=1000&q=70",
+                          ][index % 3]}
+                          alt=""
+                          className="absolute inset-0 h-full w-full object-cover"
+                        />
+                        <span className="absolute left-3 top-3 inline-flex rounded-full bg-white/95 px-2.5 py-1 text-xs font-bold text-emerald-700 shadow">
+                          {project.status}
+                        </span>
+                      </div>
+                      <div className="p-5">
+                        <h3 className="text-lg font-bold text-[#0b2e59]">{project.name}</h3>
+                        <p className="mt-2 line-clamp-3 text-sm leading-6 text-[#5b6b7a]">{project.description}</p>
+                        <button
+                          type="button"
+                          onClick={() => startJoinFlow("volunteer")}
+                          className="mt-4 w-full rounded-xl bg-[#0b2e59] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#123c73]"
+                        >
+                          Sign up to volunteer
+                        </button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </section>
@@ -1522,9 +1504,9 @@ export default function Page() {
             </p>
             <div className="mt-7 grid gap-4 sm:grid-cols-3">
               {[
-                { label: "Volunteer hours logged", value: Math.max(stats.totalImpact, 250), accent: "text-emerald-600" },
-                { label: "Active initiatives", value: Math.max(stats.activeProjects, 40), accent: "text-[#0b2e59]" },
-                { label: "Volunteers onboard", value: Math.max(stats.volunteers, 1200), accent: "text-cyan-700" },
+                { label: "Volunteer hours logged", value: stats.totalImpact, accent: "text-emerald-600" },
+                { label: "Active initiatives", value: stats.activeProjects, accent: "text-[#0b2e59]" },
+                { label: "Volunteers onboard", value: stats.volunteers, accent: "text-cyan-700" },
               ].map((metric) => (
                 <div key={metric.label} className="rounded-2xl bg-white/95 p-6 text-center shadow-lg backdrop-blur">
                   <p className={`text-5xl font-black tracking-tight ${metric.accent}`}>

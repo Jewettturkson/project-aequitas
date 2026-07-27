@@ -621,6 +621,17 @@ export async function seedIfEmpty(uid: string, email: string, displayName: strin
     });
   }
 
+  // Real-data policy: remove any synthetic pilot projects seeded by earlier
+  // versions, and never seed fake data again. Dashboards reflect real activity.
+  const existing = await listProjects();
+  for (const project of existing) {
+    if ((project as ProjectDoc & { pilotData?: boolean }).pilotData) {
+      await deleteDocument('projects', project.id);
+    }
+  }
+  return;
+
+  // eslint-disable-next-line no-unreachable
   const projects = await listProjects();
   if (projects.length === 0) {
     const baseProjects: Omit<ProjectDoc, 'id'>[] = [

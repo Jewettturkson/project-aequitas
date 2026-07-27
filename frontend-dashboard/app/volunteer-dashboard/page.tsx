@@ -119,6 +119,51 @@ export default function VolunteerDashboardPage() {
   const [showProfileEditor, setShowProfileEditor] = useState(false);
   const [showContributionModal, setShowContributionModal] = useState(false);
   const [themeMode, setThemeMode] = useState<"mission" | "clean" | "contrast">("mission");
+  // Real platform projects from the orchestrator API (no synthetic data)
+  type PlatformProject = { id: string; name: string; description: string; status: string };
+  const [livePlatformProjects, setLivePlatformProjects] = useState<PlatformProject[]>([]);
+  const [applyingProjectId, setApplyingProjectId] = useState<string | null>(null);
+  const [appliedProjectIds, setAppliedProjectIds] = useState<string[]>([]);
+  const orchestratorUrl = process.env.NEXT_PUBLIC_ORCHESTRATOR_URL || "https://api.nodeenturk.org";
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`${orchestratorUrl}/api/v1/projects?scope=active&limit=12`)
+      .then((res) => (res.ok ? res.json() : { data: [] }))
+      .then((payload: { data?: PlatformProject[] }) => {
+        if (!cancelled) setLivePlatformProjects(payload.data || []);
+      })
+      .catch(() => {
+        if (!cancelled) setLivePlatformProjects([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const applyToPlatformProject = async (project: PlatformProject) => {
+    if (!profile) return;
+    setApplyingProjectId(project.id);
+    try {
+      const res = await fetch(`${orchestratorUrl}/api/v1/projects/${project.id}/applications`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          volunteerName: profile.displayName || "TurkNode Volunteer",
+          volunteerEmail: profile.email,
+          message: `Application submitted from the TurkNode volunteer dashboard by ${profile.displayName || profile.email}.`,
+        }),
+      });
+      if (!res.ok) throw new Error("Application failed");
+      setAppliedProjectIds((prev) => [...prev, project.id]);
+    } catch {
+      // surface failure through the existing error banner state if present
+      setApplyingProjectId(null);
+      return;
+    }
+    setApplyingProjectId(null);
+  };
   const [profileDraft, setProfileDraft] = useState({
     displayName: profile?.displayName || "",
     bio: profile?.bio || "",
@@ -465,16 +510,46 @@ export default function VolunteerDashboardPage() {
     if (activeSection === "discover") {
       return (
         <SectionCard title="Discover Projects">
-          <p className="mb-3 text-sm text-slate-600">
-            Browse active opportunities aligned with your skills, location, and community goals.
+          <p className="mb-4 text-sm text-slate-600">
+            Live projects from the TurkNode network. Applying sends a real application to the
+            project team.
           </p>
-          <button
-            type="button"
-            onClick={() => setActiveTab("projects")}
-            className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
-          >
-            Open project filters
-          </button>
+          {livePlatformProjects.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
+              <p className="text-base font-semibold text-slate-800">No open projects right now</p>
+              <p className="mt-1 text-sm text-slate-600">
+                New initiatives are onboarding. Check back soon, or ask a local organization to
+                post their project on TurkNode.
+              </p>
+            </div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2">
+              {livePlatformProjects.map((project) => (
+                <article
+                  key={project.id}
+                  className="rounded-2xl border border-slate-200 p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm"
+                >
+                  <span className="inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">
+                    {project.status}
+                  </span>
+                  <h3 className="mt-2 text-lg font-bold text-slate-900">{project.name}</h3>
+                  <p className="mt-1.5 line-clamp-3 text-sm leading-6 text-slate-600">{project.description}</p>
+                  <button
+                    type="button"
+                    disabled={applyingProjectId === project.id || appliedProjectIds.includes(project.id)}
+                    onClick={() => void applyToPlatformProject(project)}
+                    className="mt-4 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {appliedProjectIds.includes(project.id)
+                      ? "Application sent"
+                      : applyingProjectId === project.id
+                        ? "Sending application..."
+                        : "Apply to this project"}
+                  </button>
+                </article>
+              ))}
+            </div>
+          )}
         </SectionCard>
       );
     }
