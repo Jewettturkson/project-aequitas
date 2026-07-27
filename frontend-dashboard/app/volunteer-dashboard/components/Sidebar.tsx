@@ -66,7 +66,7 @@ export default function Sidebar({
         <div className="flex h-full flex-col p-5">
           <div className="mb-6 rounded-2xl border border-white/10 bg-white/5 p-4">
             <div className="mx-auto h-[74px] w-full max-w-[220px]">
-              <BrandLogo variant="auto" className="h-full w-full" priority />
+              <BrandLogo variant="auto" className="h-full w-full" onDark priority />
             </div>
           </div>
 
@@ -110,11 +110,11 @@ export default function Sidebar({
           <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-4">
             <div className="mb-2 flex items-center justify-between text-sm">
               <span>Profile completion</span>
-              <span className="font-semibold text-amber-300">{profileCompletion}%</span>
+              <span className={`font-semibold ${profileCompletion >= 100 ? "text-emerald-300" : "text-amber-300"}`}>{profileCompletion}%</span>
             </div>
             <div className="h-2 rounded-full bg-white/10">
               <div
-                className="h-2 rounded-full bg-gradient-to-r from-amber-300 to-yellow-500"
+                className={`h-2 rounded-full bg-gradient-to-r ${profileCompletion >= 100 ? "from-emerald-300 to-emerald-500" : "from-amber-300 to-yellow-500"}`}
                 style={{ width: `${profileCompletion}%` }}
               />
             </div>

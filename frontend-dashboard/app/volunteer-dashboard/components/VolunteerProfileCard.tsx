@@ -47,7 +47,7 @@ export default function VolunteerProfileCard({
         }`}
       >
         {volunteer.availableForProjects
-          ? `Available for new projects • active on ${volunteer.completedProjects} completed`
+          ? `Available for new projects • ${volunteer.completedProjects || 0} completed`
           : "Currently unavailable for new projects"}
       </button>
 

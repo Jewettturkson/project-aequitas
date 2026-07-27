@@ -1,0 +1,18 @@
+<svg width="512" height="256" viewBox="0 0 512 256" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">TurkNode icon</title>
+  <desc id="desc">Looped TurkNode symbol</desc>
+  <defs>
+    <linearGradient id="strokeGradient" x1="40" y1="30" x2="460" y2="210" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#12213C"/>
+      <stop offset="1" stop-color="#0A1732"/>
+    </linearGradient>
+    <linearGradient id="accentGradient" x1="0" y1="0" x2="72" y2="72" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#60A5FA"/>
+      <stop offset="1" stop-color="#3B82F6"/>
+    </linearGradient>
+  </defs>
+  <path d="M238 68C214 42 184 28 148 28C73 28 20 84 20 128C20 172 73 228 148 228C184 228 214 214 238 188" stroke="url(#strokeGradient)" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M276 68C300 42 330 28 366 28C441 28 494 84 494 128C494 172 441 228 366 228C330 228 300 214 276 188" stroke="url(#strokeGradient)" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M176 72L318 184" stroke="url(#strokeGradient)" stroke-width="22" stroke-linecap="round"/>
+  <rect x="245" y="102" width="72" height="32" rx="16" transform="rotate(40 245 102)" fill="url(#accentGradient)"/>
+</svg>

@@ -2,9 +2,10 @@ import { Sparkles } from "lucide-react";
 
 type HeroSectionProps = {
   title: string;
+  subtitle?: string;
 };
 
-export default function HeroSection({ title }: HeroSectionProps) {
+export default function HeroSection({ title, subtitle }: HeroSectionProps) {
   return (
     <section className="mb-6">
       <div className="mb-4 flex items-center gap-3">
@@ -16,9 +17,10 @@ export default function HeroSection({ title }: HeroSectionProps) {
           View AI suggestions
         </button>
       </div>
-      <h1 className="max-w-3xl text-2xl font-black leading-[1.08] tracking-tight text-slate-900 md:text-4xl xl:text-[3rem]">
+      <h1 className="max-w-3xl text-2xl font-black leading-[1.1] tracking-tight text-slate-900 md:text-3xl">
         {title}
       </h1>
+      {subtitle ? <p className="mt-2 max-w-2xl text-sm text-slate-600 md:text-base">{subtitle}</p> : null}
     </section>
   );
 }

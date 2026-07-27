@@ -26,24 +26,33 @@ EMBED_MODEL = os.getenv("OPENAI_EMBED_MODEL", "text-embedding-3-small")
 MOCK_EMBEDDINGS = os.getenv("MOCK_EMBEDDINGS", "false").lower() == "true"
 SERVICE_TOKEN = os.getenv("SERVICE_TOKEN", "")
 
-if not DATABASE_URL:
-  raise RuntimeError("DATABASE_URL is required")
-if not MOCK_EMBEDDINGS and not OPENAI_API_KEY:
-  raise RuntimeError("OPENAI_API_KEY is required")
+# Pool and OpenAI client are created lazily on first use so the service can
+# boot (and unit tests can import this module) without a live database or API key.
+# Misconfiguration still fails loudly on the first request that needs the resource.
+db_pool = None
+openai_client = None
 
-db_pool = ThreadedConnectionPool(
-  minconn=int(os.getenv("DB_POOL_MIN", "1")),
-  maxconn=int(os.getenv("DB_POOL_MAX", "10")),
-  dsn=DATABASE_URL
-)
 
-bootstrap_conn = db_pool.getconn()
-try:
-  register_vector(bootstrap_conn)
-finally:
-  db_pool.putconn(bootstrap_conn)
+def _get_db_pool():
+  global db_pool
+  if db_pool is None:
+    if not DATABASE_URL:
+      raise RuntimeError("DATABASE_URL is required")
+    db_pool = ThreadedConnectionPool(
+      minconn=int(os.getenv("DB_POOL_MIN", "1")),
+      maxconn=int(os.getenv("DB_POOL_MAX", "10")),
+      dsn=DATABASE_URL
+    )
+  return db_pool
 
-openai_client = None if MOCK_EMBEDDINGS else OpenAI(api_key=OPENAI_API_KEY)
+
+def _get_openai_client():
+  global openai_client
+  if openai_client is None:
+    if not OPENAI_API_KEY:
+      raise RuntimeError("OPENAI_API_KEY is required")
+    openai_client = OpenAI(api_key=OPENAI_API_KEY)
+  return openai_client
 
 app = Flask(__name__)
 
@@ -121,7 +130,7 @@ def _embed_description(description):
   if MOCK_EMBEDDINGS:
     return _mock_embedding(description)
 
-  response = openai_client.embeddings.create(
+  response = _get_openai_client().embeddings.create(
     model=EMBED_MODEL,
     input=description,
   )
@@ -159,14 +168,15 @@ def _query_top_volunteers(embedding, top_k):
     LIMIT %s
   """
 
-  conn = db_pool.getconn()
+  pool = _get_db_pool()
+  conn = pool.getconn()
   try:
     register_vector(conn)
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
       cur.execute(sql, (vector_literal, vector_literal, top_k))
       return cur.fetchall()
   finally:
-    db_pool.putconn(conn)
+    pool.putconn(conn)
 
 
 def _upsert_volunteer_embedding(user_id, skill_summary):
@@ -182,7 +192,8 @@ def _upsert_volunteer_embedding(user_id, skill_summary):
       skill_summary = EXCLUDED.skill_summary
   """
 
-  conn = db_pool.getconn()
+  pool = _get_db_pool()
+  conn = pool.getconn()
   try:
     register_vector(conn)
     with conn.cursor() as cur:
@@ -192,7 +203,7 @@ def _upsert_volunteer_embedding(user_id, skill_summary):
     conn.rollback()
     raise
   finally:
-    db_pool.putconn(conn)
+    pool.putconn(conn)
 
 
 @app.get("/healthz")

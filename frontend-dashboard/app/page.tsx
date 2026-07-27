@@ -21,6 +21,7 @@ import OpenProjectIntakePanel, {
   type ProjectStatus,
 } from "./components/OpenProjectIntakePanel";
 import BrandLogo from "./components/BrandLogo";
+import HeroStats from "./components/landing/HeroStats";
 
 type MatchVolunteer = {
   volunteer_id: string;
@@ -1183,20 +1184,11 @@ export default function Page() {
             <p className="mt-5 max-w-xl text-base text-slate-300 md:text-lg">
               TurkNode connects sustainability, education, and civic initiatives with skilled volunteers ready to contribute.
             </p>
-            <div className="mt-8 grid gap-3 sm:grid-cols-3">
-              <div className="rounded-2xl border border-white/15 bg-white/5 p-4">
-                <p className="text-2xl font-black text-cyan-200">250+</p>
-                <p className="mt-1 text-xs uppercase tracking-wide text-slate-300">Volunteer hours</p>
-              </div>
-              <div className="rounded-2xl border border-white/15 bg-white/5 p-4">
-                <p className="text-2xl font-black text-emerald-200">40</p>
-                <p className="mt-1 text-xs uppercase tracking-wide text-slate-300">Active initiatives</p>
-              </div>
-              <div className="rounded-2xl border border-white/15 bg-white/5 p-4">
-                <p className="text-2xl font-black text-blue-200">1,200</p>
-                <p className="mt-1 text-xs uppercase tracking-wide text-slate-300">Lives supported</p>
-              </div>
-            </div>
+            <HeroStats
+              volunteers={stats.volunteers}
+              totalImpact={stats.totalImpact}
+              activeProjects={stats.activeProjects}
+            />
           </div>
 
           <div

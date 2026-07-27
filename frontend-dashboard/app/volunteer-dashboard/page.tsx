@@ -140,8 +140,9 @@ export default function VolunteerDashboardPage() {
     if (activeTab === "projects") return "Discover and contribute to high-impact community projects";
     if (activeTab === "achievements") return "Celebrate milestones and sustained service impact";
     if (activeTab === "recommendations") return "Personalized opportunities for your mission profile";
-    return "Making community impact through service, collaboration, and innovation";
-  }, [activeTab]);
+    const firstName = (profile?.displayName || "").trim().split(" ")[0];
+    return firstName ? `Welcome back, ${firstName}` : "Welcome back";
+  }, [activeTab, profile?.displayName]);
 
   const missionClasses =
     themeMode === "clean"
@@ -289,7 +290,7 @@ export default function VolunteerDashboardPage() {
 
   const renderHomeContent = () => (
     <>
-      <HeroSection title={panelTitle} />
+      <HeroSection title={panelTitle} subtitle={activeTab === "overview" ? "Community impact through service, collaboration, and innovation." : undefined} />
       <TabNav activeTab={activeTab} onTabChange={setActiveTab} />
 
       {activeTab === "overview" && (
@@ -312,7 +313,7 @@ export default function VolunteerDashboardPage() {
                 <p className="flex items-center gap-1 text-xs uppercase text-slate-500">
                   <BarChart3 className="h-3.5 w-3.5 text-violet-600" /> Hours logged
                 </p>
-                <p className="mt-2 text-2xl font-black">{totalHours.toFixed(1)}h</p>
+                <p className="mt-2 text-2xl font-black">{Number.isInteger(totalHours) ? totalHours : totalHours.toFixed(1)}h</p>
               </div>
               <div className="rounded-2xl border border-amber-100 bg-amber-50/30 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm">
                 <p className="flex items-center gap-1 text-xs uppercase text-slate-500">
@@ -660,11 +661,11 @@ export default function VolunteerDashboardPage() {
           <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <div className="rounded-2xl border border-slate-200 p-4 transition-all duration-200 hover:border-slate-300 hover:shadow-sm">
               <p className="text-xs uppercase text-slate-500">Hours contributed</p>
-              <p className="mt-1 text-2xl font-black">{profile.hoursContributed}h</p>
+              <p className="mt-1 text-2xl font-black">{Number.isInteger(totalHours) ? totalHours : totalHours.toFixed(1)}h</p>
             </div>
             <div className="rounded-2xl border border-slate-200 p-4 transition-all duration-200 hover:border-slate-300 hover:shadow-sm">
               <p className="text-xs uppercase text-slate-500">Completed projects</p>
-              <p className="mt-1 text-2xl font-black">{profile.completedProjects}</p>
+              <p className="mt-1 text-2xl font-black">{completedProjects.length}</p>
             </div>
             <div className="rounded-2xl border border-slate-200 p-4 transition-all duration-200 hover:border-slate-300 hover:shadow-sm">
               <p className="text-xs uppercase text-slate-500">Impact score</p>
@@ -854,7 +855,11 @@ export default function VolunteerDashboardPage() {
 
           <div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
             <VolunteerProfileCard
-              volunteer={profile}
+              volunteer={{
+                ...profile,
+                completedProjects: completedProjects.length,
+                hoursContributed: totalHours,
+              }}
               onEditProfile={() => {
                 setProfileDraft({
                   displayName: profile.displayName,

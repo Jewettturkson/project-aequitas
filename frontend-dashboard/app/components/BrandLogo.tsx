@@ -4,9 +4,12 @@ type BrandLogoProps = {
   variant?: "full" | "icon" | "auto";
   className?: string;
   priority?: boolean;
+  /** Renders the mark in white for dark backgrounds (the source SVG is navy). */
+  onDark?: boolean;
 };
 
-export default function BrandLogo({ variant = "auto", className = "", priority = false }: BrandLogoProps) {
+export default function BrandLogo({ variant = "auto", className = "", priority = false, onDark = false }: BrandLogoProps) {
+  const imgClass = onDark ? "object-contain brightness-0 invert" : "object-contain";
   return (
     <div className={`relative ${className}`} aria-label="TurkNode branding">
       {variant === "icon" ? (
@@ -15,7 +18,7 @@ export default function BrandLogo({ variant = "auto", className = "", priority =
           alt="TurkNode icon"
           fill
           priority={priority}
-          className="object-contain"
+          className={imgClass}
           sizes="(max-width: 768px) 64px, 96px"
         />
       ) : variant === "full" ? (
@@ -24,7 +27,7 @@ export default function BrandLogo({ variant = "auto", className = "", priority =
           alt="TurkNode logo"
           fill
           priority={priority}
-          className="object-contain"
+          className={imgClass}
           sizes="(max-width: 768px) 220px, 320px"
         />
       ) : (
@@ -35,7 +38,7 @@ export default function BrandLogo({ variant = "auto", className = "", priority =
               alt="TurkNode logo"
               fill
               priority={priority}
-              className="object-contain"
+              className={imgClass}
               sizes="(max-width: 1024px) 240px, 340px"
             />
           </div>
@@ -45,7 +48,7 @@ export default function BrandLogo({ variant = "auto", className = "", priority =
               alt="TurkNode icon"
               fill
               priority={priority}
-              className="object-contain"
+              className={imgClass}
               sizes="88px"
             />
           </div>
