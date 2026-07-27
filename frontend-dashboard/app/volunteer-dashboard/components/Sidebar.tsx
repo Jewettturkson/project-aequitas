@@ -19,6 +19,7 @@ type SidebarProps = {
   activeItem: string;
   onSelect: (itemId: string) => void;
   profileName: string;
+  profilePhotoUrl?: string;
   profileRole: string;
   profileCompletion: number;
   isOpen: boolean;
@@ -30,6 +31,7 @@ export default function Sidebar({
   activeItem,
   onSelect,
   profileName,
+  profilePhotoUrl,
   profileRole,
   profileCompletion,
   isOpen,
@@ -72,7 +74,24 @@ export default function Sidebar({
 
           <div className="mb-5 rounded-2xl border border-white/10 bg-white/10 p-4">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-cyan-300 to-blue-500" />
+              {profilePhotoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={profilePhotoUrl}
+                  alt={profileName}
+                  className="h-10 w-10 rounded-full border border-white/20 object-cover"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-cyan-300 to-blue-500 text-sm font-bold text-[#0b1f38]">
+                  {profileName
+                    .split(" ")
+                    .map((part) => part[0])
+                    .slice(0, 2)
+                    .join("")
+                    .toUpperCase()}
+                </div>
+              )}
               <div>
                 <p className="font-semibold">{profileName}</p>
                 <p className="text-xs text-slate-300">{profileRole}</p>

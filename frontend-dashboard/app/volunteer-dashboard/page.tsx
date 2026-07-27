@@ -892,6 +892,7 @@ export default function VolunteerDashboardPage() {
           router.replace(`/volunteer-dashboard?section=${next}`, { scroll: false });
         }}
         profileName={profile.displayName}
+        profilePhotoUrl={profile.photoUrl}
         profileRole="Volunteer"
         profileCompletion={profile.profileCompletion}
         isOpen={sidebarOpen}
